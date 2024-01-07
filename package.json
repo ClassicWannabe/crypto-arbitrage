@@ -7,7 +7,8 @@
   "scripts": {
     "start:dev": "npx nodemon",
     "build": "rimraf ./build && tsc",
-    "start:prod": "npm run build && node build/index.js"
+    "start:prod": "npm run build && node build/index.js",
+    "generate-gql-types": "graphql-codegen"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
@@ -16,10 +17,13 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/typescript": "^4.0.1",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.6",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",
+    "prettier": "^3.1.1",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

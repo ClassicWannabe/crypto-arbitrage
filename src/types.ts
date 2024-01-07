@@ -8,3 +8,13 @@ export type CoinPair = {
     quoteCoin: Coin;
     swapPrice: number;
 }
+
+export type TriangularCoinPair = {
+    firstPair: CoinPair;
+    secondPair: CoinPair;
+    thirdPair: CoinPair;
+}
+
+export interface Exchange {
+
+}

@@ -1,1 +1,6 @@
-export class PairsFinder {}
+export class PairsFinder {
+
+    find() {
+        
+    }
+}
