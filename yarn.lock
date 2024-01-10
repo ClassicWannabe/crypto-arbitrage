@@ -1896,6 +1896,13 @@ capital-case@^1.0.4:
     tslib "^2.0.3"
     upper-case-first "^2.0.2"
 
+ccxt@^4.2.10:
+  version "4.2.10"
+  resolved "https://registry.yarnpkg.com/ccxt/-/ccxt-4.2.10.tgz#5ea7cb850bd7bea270d8b0d69ecc74b4ecc69cd7"
+  integrity sha512-NcBum6YZQfuzQstiOV6wonOw5khYYtHo3xXQVpDWznLpuUnQ+bxsr08xIV4SbRuMaS10Gn8yizvNP7f2D55xXw==
+  dependencies:
+    ws "^8.8.1"
+
 chalk@^2.4.2:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-2.4.2.tgz#cd42541677a54333cf541a49108c1432b44c9424"
@@ -4657,7 +4664,7 @@ write-file-atomic@^4.0.2:
     imurmurhash "^0.1.4"
     signal-exit "^3.0.7"
 
-ws@^8.12.0, ws@^8.13.0, ws@^8.15.0:
+ws@^8.12.0, ws@^8.13.0, ws@^8.15.0, ws@^8.8.1:
   version "8.16.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.16.0.tgz#d1cd774f36fbc07165066a60e40323eab6446fd4"
   integrity sha512-HS0c//TP7Ina87TfiPUz1rQzMhHrl/SG2guqRcTOIUYD2q8uhUdNHZYJUaQ8aTGPzCh+c6oawMKW35nFl1dxyQ==

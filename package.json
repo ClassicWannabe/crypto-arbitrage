@@ -5,14 +5,17 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start:dev": "npx nodemon",
+    "start:dev": "SET NODE_ENV=dev && npx nodemon",
+    "start:dev:windows": "NODE_ENV=dev npx nodemon",
     "build": "rimraf ./build && tsc",
-    "start:prod": "npm run build && node build/index.js",
+    "start:prod": "npm run build && NODE_ENV=prod node build/index.js",
+    "start:prod:windows": "npm run build && SET NODE_ENV=prod && node build/index.js",
     "generate-gql-types": "graphql-codegen"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
     "axios": "^1.6.5",
+    "ccxt": "^4.2.10",
     "graphql": "^16.8.1",
     "zod": "^3.22.4"
   },
