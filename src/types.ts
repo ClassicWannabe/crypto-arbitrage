@@ -37,14 +37,16 @@ export type Quotation = {
 
 export type ArbitrageStep = {
   exchangeId: string;
-  quotation: Quotation;
+  bestBid: Quotation;
+  bestAsk: Quotation;
   operation: TradeOperation;
-  amount: number;
-  fees: Fee[];
+  price: number;
 };
 
 export type ArbitrageData = {
-  network: string;
+  networks: string[];
   symbol: string;
+  fees: Fee[];
+  amount: number;
   steps: ArbitrageStep[];
 };

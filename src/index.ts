@@ -45,6 +45,8 @@ const mexc = new ccxt.mexc({
 
 const exchanges = [binance, htx, gateio];
 
+const service = new MultiExchangeArbitrage(exchanges, 5);
+
 export async function main() {
   const markets = fs.readFileSync(`temp/${binance.id}-markets.json`, {
     encoding: "utf-8",
@@ -53,10 +55,14 @@ export async function main() {
 
   console.log(symbols);
 
-  const service = new MultiExchangeArbitrage(exchanges);
-
   const data = await service.calculate(symbols);
 
+  if (!data.length) return null;
+
+  fs.writeFileSync(
+    "temp/multi-exchange-arbitrages.json",
+    JSON.stringify(data, null, 2)
+  );
   console.log(JSON.stringify(data, null, 2));
 }
 
