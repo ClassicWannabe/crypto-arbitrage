@@ -1,7 +1,10 @@
 import {
   ArbitrageData,
   ArbitrageStep,
-  Fee,
+  ArbitrageSteps,
+  ExchangeEvent,
+  FeeTemp,
+  FeeType,
   Quotation,
   TradeOperation,
   TrasnferOperation,
@@ -19,7 +22,7 @@ type ExchangePair = [Exchange, Exchange];
 
 type NetworkPair = [Network, Network];
 
-type ArbitrageCalculationExchangeDetails = {
+type ArbitrageCalculationExchangeData = {
   exchange: Exchange;
   bestBidOrAsk: Quotation;
 };
@@ -27,8 +30,13 @@ type ArbitrageCalculationExchangeDetails = {
 type ArbitrageCalculationParams = {
   symbol: string;
   transferCurrency: Currency;
-  buyExchange: ArbitrageCalculationExchangeDetails;
-  sellExchange: ArbitrageCalculationExchangeDetails;
+  buyExchange: ArbitrageCalculationExchangeData;
+  sellExchange: ArbitrageCalculationExchangeData;
+};
+
+type ProfitableArbitrageResult = {
+  fees: FeeTemp[];
+  amount: number;
 };
 
 export class MultiExchangeArbitrage {
@@ -94,16 +102,18 @@ export class MultiExchangeArbitrage {
   }
 
   private async getArbitrages(symbol: string): Promise<ArbitrageData[]> {
-    const exchangePairs = this.getExchangeCombinations();
+    const exchangePairs = this.getExchangePermutations();
     const arbitrages: ArbitrageData[] = [];
     for (const [exchangeOne, exchangeTwo] of exchangePairs) {
       const [exchangeOneMarketData, exchangeTwoMarketData] = await Promise.all([
-        this.getActiveMarket(exchangeOne, symbol),
-        this.getActiveMarket(exchangeTwo, symbol),
+        exchangeOne.getMarket(symbol, true),
+        exchangeTwo.getMarket(symbol, true),
       ]);
 
       if (!exchangeOneMarketData || !exchangeTwoMarketData) {
-        logger.debug(`Missing market data ${exchangeOne.id}-${exchangeTwo.id}`);
+        logger.debug(
+          `Missing active market data ${exchangeOne.id}-${exchangeTwo.id}`
+        );
         continue;
       }
 
@@ -112,11 +122,14 @@ export class MultiExchangeArbitrage {
 
       const [baseCurrencyCommonNetworks, quoteCurrencyCommonNetworks] =
         await Promise.all([
-          this.getCommonNetworkNames(
+          this.getCommonActiveNetworkNames(
             [exchangeOne, exchangeTwo],
             baseCurrencyCode
           ),
-          this.getCommonNetworks([exchangeTwo, exchangeOne], quoteCurrencyCode),
+          this.getCommonActiveNetworkNames(
+            [exchangeTwo, exchangeOne],
+            quoteCurrencyCode
+          ),
         ]);
 
       if (
@@ -135,12 +148,11 @@ export class MultiExchangeArbitrage {
         exchangeTwoBaseCurrency,
         exchangeTwoQuoteCurrency,
       ] = await Promise.all([
-        this.getActiveCurrency(exchangeOne, baseCurrencyCode),
-        this.getActiveCurrency(exchangeOne, quoteCurrencyCode),
-        this.getActiveCurrency(exchangeTwo, baseCurrencyCode),
-        this.getActiveCurrency(exchangeTwo, quoteCurrencyCode),
+        exchangeOne.getCurrency(baseCurrencyCode, true),
+        exchangeOne.getCurrency(quoteCurrencyCode, true),
+        exchangeTwo.getCurrency(baseCurrencyCode, true),
+        exchangeTwo.getCurrency(quoteCurrencyCode, true),
       ]);
-
       if (
         !exchangeOneBaseCurrency ||
         !exchangeOneQuoteCurrency ||
@@ -157,6 +169,63 @@ export class MultiExchangeArbitrage {
         this.getOrderBook(exchangeOne, symbol),
         this.getOrderBook(exchangeTwo, symbol),
       ]);
+
+      if (!exchangeOneOrderBook || !exchangeTwoOrderBook) {
+        logger.debug(
+          `Missing order books ${exchangeOne.id}-${exchangeTwo.id}. Symbol: ${symbol}`
+        );
+        continue;
+      }
+
+      const emptyFee = { type: FeeType.FIXED, value: 0 };
+      const baseAmount = Math.min(
+        exchangeOneOrderBook.bestAsk.volume,
+        exchangeTwoOrderBook.bestBid.volume
+      );
+      const quoteAmount = baseAmount * exchangeOneOrderBook.bestAsk.price;
+      const buyFee =
+        (await exchangeOne.calculateTradingFee(symbol)) ?? emptyFee;
+      const sellFee =
+        (await exchangeTwo.calculateTradingFee(symbol)) ?? emptyFee;
+      const networkName = baseCurrencyCommonNetworks[0]!;
+      const withdrawFee =
+        (await exchangeOne.calculateWithdrawFee(
+          baseCurrencyCode,
+          baseCurrencyCommonNetworks[0]
+        )) ?? emptyFee;
+
+      const steps: ArbitrageSteps = [
+        {
+          event: ExchangeEvent.FIRST_TRADE,
+          exchangeId: exchangeOne.id,
+          operation: TradeOperation.BUY,
+          base: { amount: baseAmount, currencyCode: baseCurrencyCode },
+          quote: {
+            amount: quoteAmount,
+            currencyCode: quoteCurrencyCode,
+          },
+        },
+        { event: ExchangeEvent.PAY_FEE, ...buyFee },
+        {
+          event: ExchangeEvent.WITHDRAW,
+          network: networkName,
+        },
+        { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
+        {
+          event: ExchangeEvent.LAST_TRADE,
+          operation: TradeOperation.SELL,
+          exchangeId: exchangeTwo.id,
+          coin: {
+            amount: exchangeTwoOrderBook.bestBid.price,
+            currencyCode: quoteCurrencyCode,
+          },
+        },
+        { event: ExchangeEvent.PAY_FEE, ...sellFee },
+      ];
+
+      const profitOrLossPercent = this.calculateStepsProfitOrLossPercent(steps);
+      if (this.isArbitrageFeasible(profitOrLossPercent)) {
+      }
 
       const forwardArbitrageProfitability =
         await this.calculateArbitrageProfitability({
@@ -200,7 +269,7 @@ export class MultiExchangeArbitrage {
       const reverseArbitrageProfitability =
         await this.calculateArbitrageProfitability({
           symbol,
-          transferCurrency: exchangeTwoBaseCurrency,
+          transferCurrency: exchangeOneQuoteCurrency,
           buyExchange: {
             exchange: exchangeTwo,
             bestBidOrAsk: exchangeTwoOrderBook.bestAsk,
@@ -216,21 +285,21 @@ export class MultiExchangeArbitrage {
           symbol,
           fees,
           amount,
-          networks: baseCurrencyCommonNetworks,
+          networks: quoteCurrencyCommonNetworks,
           steps: [
-            {
-              exchangeId: exchangeTwo.id,
-              bestAsk: exchangeTwoOrderBook.bestAsk,
-              bestBid: exchangeTwoOrderBook.bestBid,
-              operation: TradeOperation.BUY,
-              price: exchangeTwoOrderBook.bestAsk.price,
-            },
             {
               exchangeId: exchangeOne.id,
               bestAsk: exchangeOneOrderBook.bestAsk,
               bestBid: exchangeOneOrderBook.bestBid,
               operation: TradeOperation.SELL,
               price: exchangeOneOrderBook.bestBid.price,
+            },
+            {
+              exchangeId: exchangeTwo.id,
+              bestAsk: exchangeTwoOrderBook.bestAsk,
+              bestBid: exchangeTwoOrderBook.bestBid,
+              operation: TradeOperation.BUY,
+              price: exchangeTwoOrderBook.bestAsk.price,
             },
           ],
         });
@@ -240,20 +309,53 @@ export class MultiExchangeArbitrage {
     return arbitrages;
   }
 
+  private calculateStepsProfitOrLossPercent(steps: ArbitrageSteps): number {
+    let initialAmount = 0;
+    let stepAmount = 0;
+    for (const step of steps) {
+      switch (step.event) {
+        case ExchangeEvent.FIRST_TRADE: {
+          if (step.operation === TradeOperation.BUY) {
+            initialAmount = step.quote.amount;
+            stepAmount = step.base.amount;
+          } else {
+            initialAmount = step.base.amount;
+            stepAmount = step.quote.amount;
+          }
+          break;
+        }
+        case ExchangeEvent.PAY_FEE: {
+          if (step.type === FeeType.PERCENT) {
+            stepAmount -= stepAmount * step.value;
+          } else {
+            stepAmount -= step.value;
+          }
+          break;
+        }
+        case ExchangeEvent.LAST_TRADE: {
+          stepAmount *= step.coin.amount;
+        }
+      }
+    }
+    return (stepAmount - initialAmount) / initialAmount;
+  }
+
+  private isArbitrageFeasible(profitOrLossPercent: number) {
+    return profitOrLossPercent >= this.minProfitPercent;
+  }
+
   private async calculateArbitrageProfitability({
     symbol,
     transferCurrency,
     buyExchange: { exchange: buyExchange, bestBidOrAsk: buyQuotation },
     sellExchange: { exchange: sellExchange, bestBidOrAsk: sellQuotation },
-  }: ArbitrageCalculationParams): Promise<{
-    fees: Fee[];
-    amount: number;
-  } | null> {
+  }: ArbitrageCalculationParams): Promise<ProfitableArbitrageResult | null> {
     const profitOrLoss = sellQuotation.price - buyQuotation.price;
     const profitOrLossPercent = (profitOrLoss / buyQuotation.price) * 100;
-    if (profitOrLossPercent < this.minProfitPercent) {
-      return null;
-    }
+    // if (profitOrLossPercent < this.minProfitPercent) {
+    //   return null;
+    // }
+    console.log(transferCurrency);
     const amount = Math.min(buyQuotation.volume, sellQuotation.volume);
     const fees = await this.calculateFees({
       symbol,
@@ -274,6 +376,48 @@ export class MultiExchangeArbitrage {
     return { fees, amount };
   }
 
+  private swapMarket(
+    exchange: Exchange,
+    operation: TradeOperation,
+    bestAskOrBid: Quotation
+  ) {
+    const amount = Math.min(exchange1bestAsk.volume, exchange2bestBid.volume);
+    const price = exchange1bestAsk.price;
+    const fee = exchange1.calculateTradingFee(symbol, amount);
+
+    return { amount, price, fee };
+  }
+
+  private buyMarket() {
+    const amount = Math.min(exchange1bestAsk.volume, exchange2bestBid.volume);
+    const price = exchange1bestAsk.price;
+    const fee = exchange1.calculateTradingFee(symbol, amount);
+
+    return { amount, price, fee };
+  }
+
+  private async withdrawCurrency({
+    transferCurrencyCode,
+    network,
+    exchange,
+  }: {
+    exchange: Exchange;
+    transferCurrencyCode: string;
+    network: string;
+  }) {
+    const fee = await exchange.calculateWithdrawFee(
+      transferCurrencyCode,
+      network
+    );
+
+    return { fee };
+  }
+
+  private sellMarket() {
+    const price = exchange2bestAsk.price;
+    const fee = exchange2.calculateTradingFee(symbol, price);
+  }
+
   private async calculateFees({
     symbol,
     transferCurrencyCode,
@@ -284,7 +428,7 @@ export class MultiExchangeArbitrage {
     transferCurrencyCode: string;
     amount: number;
     exchangePair: ExchangePair;
-  }): Promise<Fee[]> {
+  }): Promise<FeeTemp[]> {
     const [buyExchange, sellExchange] = exchangePair;
     const [buyExchangeTradingFee, sellExchangeTradingFee, withdrawalFee] =
       await Promise.all([
@@ -293,7 +437,7 @@ export class MultiExchangeArbitrage {
         buyExchange.calculateWithdrawFee(transferCurrencyCode),
       ]);
 
-    const fees: Fee[] = [];
+    const fees: FeeTemp[] = [];
 
     if (buyExchangeTradingFee) {
       fees.push({ amount: buyExchangeTradingFee, type: TradeOperation.BUY });
@@ -308,54 +452,25 @@ export class MultiExchangeArbitrage {
     return fees;
   }
 
-  // private async getActiveMarkets(
-  //   exchanges: Exchange[],
-  //   symbol: string
-  // ): Promise<Record<string,Market> | null> {
-  //   const markets = await Promise.all(
-  //     exchanges.map((exchange) => ({ exchange, market: this.getMarket(exchange, symbol)}))
-  //   );
-  //   const [firstMarket, ...otherMarkets] = markets;
-
-  //   if (exchanges.length !== markets.length) {
-  //     return null;
-  //   }
-
-  //   return markets.reduce();
-  // }
-
-  private async getActiveMarket(
-    exchange: Exchange,
-    symbol: string
-  ): Promise<Market | null> {
-    const market = await exchange.getMarket(symbol);
-
-    if (!market || market?.active === false) {
-      return null;
-    }
-
-    return market;
-  }
-
-  private async getCommonNetworkNames(
+  private async getCommonActiveNetworkNames(
     exchanges: ExchangePair,
     code: string
   ): Promise<string[]> {
-    const networks = await this.getCommonNetworks(exchanges, code);
+    const networks = await this.getCommonActiveNetworks(exchanges, code);
 
-    return networks.reduce<string[]>((names, [network1, network2]) => {
-      names.push(network1.network, network2.network);
+    return networks.reduce<string[]>((names, [network1]) => {
+      names.push(network1.network);
       return names;
     }, []);
   }
 
-  private async getCommonNetworks(
+  private async getCommonActiveNetworks(
     [exchangeOne, exchangeTwo]: ExchangePair,
     code: string
   ): Promise<NetworkPair[]> {
     const [currencyOne, currencyTwo] = await Promise.all([
-      this.getActiveCurrency(exchangeOne, code),
-      this.getActiveCurrency(exchangeTwo, code),
+      exchangeOne.getCurrency(code, true),
+      exchangeTwo.getCurrency(code, true),
     ]);
 
     if (!currencyOne || !currencyTwo) {
@@ -377,43 +492,40 @@ export class MultiExchangeArbitrage {
     return commonNetworks;
   }
 
-  private async getActiveCurrency(
-    exchange: Exchange,
-    code: string
-  ): Promise<Currency | null> {
-    const currency = await exchange.getCurrency(code);
-
-    if (!currency || currency?.active === false) {
-      return null;
+  private isSameNetwork(networks: Network[]): boolean {
+    const network = networks[0]?.network;
+    for (const n of networks) {
+      if (n.network !== network) {
+        return false;
+      }
     }
-
-    return currency;
+    return true;
   }
 
   private async getOrderBook(
     exchange: Exchange,
     symbol: string
-  ): Promise<OrderBook & { bestAsk: Quotation; bestBid: Quotation }> {
+  ): Promise<(OrderBook & { bestAsk: Quotation; bestBid: Quotation }) | null> {
     const orderBook = await exchange.getOrderBook(symbol);
 
     if (!orderBook || !orderBook.asks.length || !orderBook.bids.length) {
-      throw new Error(
-        `${symbol} orderBook is missing. Exchange: ${exchange.id}`
-      );
+      logger.debug(`${symbol} orderBook is missing. Exchange: ${exchange.id}`);
+      return null;
     }
     const bestAsk = orderBook.asks[0];
     const bestBid = orderBook.bids[0];
     if (!bestAsk || !bestBid) {
-      throw new Error(
+      logger.debug(
         `${symbol} orderBook does not have asks or bids. Exchange: ${exchange.id}`
       );
+      return null;
     }
 
     return { ...orderBook, bestAsk, bestBid };
   }
 
-  private getExchangeCombinations(): ExchangePair[] {
-    const combinations: ExchangePair[] = [];
+  private getExchangePermutations(): ExchangePair[] {
+    const permutations: ExchangePair[] = [];
     for (let i = 0; i < this.exchanges.length; i++) {
       for (let j = i + 1; j < this.exchanges.length; j++) {
         const exchangeOne = this.exchanges[i];
@@ -423,19 +535,12 @@ export class MultiExchangeArbitrage {
           continue;
         }
 
-        combinations.push([exchangeOne, exchangeTwo]);
+        permutations.push(
+          [exchangeOne, exchangeTwo],
+          [exchangeTwo, exchangeOne]
+        );
       }
     }
-    return combinations;
-  }
-
-  private isSameNetwork(networks: Network[]): boolean {
-    const network = networks[0]?.network;
-    for (const n of networks) {
-      if (n.network !== network) {
-        return false;
-      }
-    }
-    return true;
+    return permutations;
   }
 }

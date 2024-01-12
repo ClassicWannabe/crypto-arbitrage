@@ -10,17 +10,22 @@ import {
   orderBookSchema,
   quotationSchema,
 } from "./schema.js";
+import { Fee } from "../types.js";
 
 export interface Exchange {
   readonly id: string;
   reloadMarkets(): Promise<void>;
   getMarkets(): Promise<Markets>;
-  getMarket(symbol: string): Promise<Market | null>;
+  getMarket(symbol: string, isActive?: boolean): Promise<Market | null>;
   getCurrencies(): Promise<Currencies>;
-  getCurrency(code: string): Promise<Currency | null>;
+  getCurrency(code: string, isActive?: boolean): Promise<Currency | null>;
+  getNetworks(currencyCode: string, isActive?: boolean): Promise<Networks>;
   getOrderBook(symbol: string): Promise<OrderBook | null>;
-  calculateTradingFee(symbol: string, amount: number): Promise<number | null>;
-  calculateWithdrawFee(code: string): Promise<number | null>;
+  calculateTradingFee(symbol: string): Promise<Fee | null>;
+  calculateWithdrawFee(
+    code: string,
+    networkName?: string
+  ): Promise<Fee | null>;
 }
 
 export type Market = z.infer<typeof marketSchema>;

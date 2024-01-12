@@ -1,6 +1,7 @@
 import { Exchange as CcxtExchange } from "ccxt";
+import { isNil } from "lodash";
 
-import { Exchange, OrderBook } from "../types.js";
+import { Exchange, Networks, OrderBook } from "../types.js";
 import {
   currenciesSchema,
   currencySchema,
@@ -8,6 +9,7 @@ import {
   marketsSchema,
   orderBookSchema,
 } from "../schema.js";
+import { FeeType } from "../../types.js";
 
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
@@ -30,7 +32,7 @@ export abstract class AbstractExchange implements Exchange {
     return marketsSchema.parse(markets);
   }
 
-  async getMarket(symbol: string) {
+  async getMarket(symbol: string, isActive?: boolean) {
     const markets = await this.exchange.loadMarkets();
     const market = markets[symbol];
 
@@ -38,7 +40,9 @@ export abstract class AbstractExchange implements Exchange {
       return null;
     }
 
-    return marketSchema.parse(market);
+    const parsedMarket = marketSchema.parse(market);
+
+    return this.getActiveOrInactiveItem(parsedMarket, isActive);
   }
 
   async getCurrencies() {
@@ -48,7 +52,7 @@ export abstract class AbstractExchange implements Exchange {
     return currenciesSchema.parse(currencies);
   }
 
-  async getCurrency(code: string) {
+  async getCurrency(code: string, isActive?: boolean) {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
     const currency = currencies[code];
@@ -57,7 +61,44 @@ export abstract class AbstractExchange implements Exchange {
       return null;
     }
 
-    return currencySchema.parse(currency);
+    const parsedCurrency = currencySchema.parse(currency);
+
+    return this.getActiveOrInactiveItem(parsedCurrency, isActive);
+  }
+
+  async getNetworks(currencyCode: string, isActive?: boolean) {
+    const currency = await this.getCurrency(currencyCode);
+
+    if (!currency) {
+      return {};
+    }
+
+    const networks = currency.networks;
+
+    return Object.entries(networks).reduce<Networks>(
+      (acc, [netoworkName, network]) => {
+        const checkedNetwork = this.getActiveOrInactiveItem(network, isActive);
+        if (!checkedNetwork) {
+          return acc;
+        }
+        acc[netoworkName] = network;
+        return acc;
+      },
+      {}
+    );
+  }
+
+  protected getActiveOrInactiveItem<TItem extends { active?: boolean | null }>(
+    item: TItem,
+    shouldBeActive?: boolean
+  ): TItem | null {
+    if (isNil(item.active) || isNil(shouldBeActive)) {
+      return item;
+    }
+    if (item.active === shouldBeActive) {
+      return item;
+    }
+    return null;
   }
 
   async getOrderBook(symbol: string) {
@@ -76,7 +117,7 @@ export abstract class AbstractExchange implements Exchange {
     return orderBookSchema.parse(orderBook);
   }
 
-  async calculateTradingFee(symbol: string, amount: number) {
+  async calculateTradingFee(symbol: string) {
     const market = await this.getMarket(symbol);
 
     if (!market) {
@@ -87,18 +128,25 @@ export abstract class AbstractExchange implements Exchange {
     const fee = Math.max(market.taker, market.maker);
 
     if (isPercentage) {
-      return amount * fee;
+      return { value: fee, type: FeeType.PERCENT };
     }
-    return fee;
+    return { value: fee, type: FeeType.FIXED };
   }
 
-  async calculateWithdrawFee(code: string): Promise<number | null> {
+  async calculateWithdrawFee(code: string, networkName?: string) {
     const currency = await this.getCurrency(code);
+    const currencyFee = currency?.fee ?? null;
 
-    if (currency?.fee) {
-      return currency.fee;
+    if (isNil(networkName)) {
+      return currencyFee ? { value: currencyFee, type: FeeType.FIXED } : null;
+    }
+    const network = currency?.networks[networkName];
+    const fee = network?.fee ?? currencyFee;
+
+    if (!fee) {
+      return null;
     }
 
-    return null;
+    return { value: fee, type: FeeType.FIXED };
   }
 }

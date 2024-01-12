@@ -8,7 +8,7 @@ export class Binance extends AbstractExchange {
     super(exchange);
   }
 
-  async getCurrency(code: string) {
+  async getCurrency(code: string, isActive?: boolean) {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
     const currency = currencies[code];
@@ -17,7 +17,9 @@ export class Binance extends AbstractExchange {
       return null;
     }
 
-    return currencySchema.parse(currency);
+    const parsedCurrency = currencySchema.parse(currency);
+
+    return this.getActiveOrInactiveItem(parsedCurrency, isActive);
   }
 
   async getCurrencies() {

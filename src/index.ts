@@ -61,7 +61,7 @@ export async function main() {
   const markets = fs.readFileSync(`temp/${binance.id}-markets.json`, {
     encoding: "utf-8",
   });
-  const symbols = Object.keys(JSON.parse(markets)).slice(0, 101);
+  const symbols = Object.keys(JSON.parse(markets)).slice(0, 10);
 
   console.log(symbols);
 
