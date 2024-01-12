@@ -6,6 +6,10 @@ import { MultiExchangeArbitrage } from "./calculators/MultiExchangeArbitrage/Mul
 import { Binance } from "./exchanges/Binance/Binance.js";
 import { GateIO } from "./exchanges/GateIO/GateIO.js";
 import { HTX } from "./exchanges/HTX/HTX.js";
+import { OKX } from "./exchanges/OKX/OKX.js";
+import { Bybit } from "./exchanges/Bybit/Bybit.js";
+import { Kucoin } from "./exchanges/Kucoin/Kucoin.js";
+import { MEXC } from "./exchanges/MEXC/MEXC.js";
 
 const ccxtBinance = new ccxt.binance({
   apiKey: process.env.BINANCE_API_KEY,
@@ -13,18 +17,23 @@ const ccxtBinance = new ccxt.binance({
 });
 const binance = new Binance(ccxtBinance);
 
-const okx = new ccxt.okx({
+const ccxtOkx = new ccxt.okx({
   apiKey: process.env.OKX_API_KEY,
   secret: process.env.OKX_API_SECRET,
 });
-const bybit = new ccxt.bybit({
+// const okx = new OKX(ccxtOkx);
+
+const ccxtBybit = new ccxt.bybit({
   apiKey: process.env.BYBIT_API_KEY,
   secret: process.env.BYBIT_API_SECRET,
 });
-const kucoin = new ccxt.kucoin({
+const bybit = new Bybit(ccxtBybit);
+
+const ccxtKucoin = new ccxt.kucoin({
   apiKey: process.env.KUCOIN_API_KEY,
   secret: process.env.KUCOIN_API_SECRET,
 });
+// const kucoin = new Kucoin(ccxtKucoin);
 
 const ccxtGateio = new ccxt.gateio({
   apiKey: process.env.GATEIO_API_KEY,
@@ -38,10 +47,11 @@ const ccxtHtx = new ccxt.htx({
 });
 const htx = new HTX(ccxtHtx);
 
-const mexc = new ccxt.mexc({
+const ccxtMexc = new ccxt.mexc({
   apiKey: process.env.MEXC_API_KEY,
   secret: process.env.MEXC_API_SECRET,
 });
+const mexc = new MEXC(ccxtMexc);
 
 const exchanges = [binance, htx, gateio];
 
