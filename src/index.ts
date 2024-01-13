@@ -1,97 +1,77 @@
 import "dotenv/config";
-import ccxt from "ccxt";
-import fs from "fs";
 import TelegramBot from "node-telegram-bot-api";
+import { Monitor } from "forever-monitor";
+import child from "child_process";
 
-import { MultiExchangeCalculator } from "./calculators/MultiExchangeCalculator/MultiExchangeCalculator.js";
-import { Binance } from "./exchanges/Binance/Binance.js";
-import { GateIO } from "./exchanges/GateIO/GateIO.js";
-import { HTX } from "./exchanges/HTX/HTX.js";
-import { OKX } from "./exchanges/OKX/OKX.js";
-import { Bybit } from "./exchanges/Bybit/Bybit.js";
-import { Kucoin } from "./exchanges/Kucoin/Kucoin.js";
-import { MEXC } from "./exchanges/MEXC/MEXC.js";
+import { getEnv } from "./helpers.js";
 import { logger } from "./logger/logger.js";
-import { env } from "./consts.js";
-import { getEnv, sleep } from "./helpers.js";
-import { FileStorage } from "./storages/File/File.js";
-import { Telegram } from "./publishers/Telegram/Telegram.js";
-import { MultiExchangeArbitrage } from "./services/MultiExchangeArbitrage/MultiExchangeArbitrage.js";
-import { ArbitrageFormatter } from "./formatters/ArbitrageFormatter/ArbitrageFormatter.js";
-
-const ccxtBinance = new ccxt.binance({
-  apiKey: env.binanceApiKey,
-  secret: env.binanceApiSecret,
-});
-const binance = new Binance(ccxtBinance);
-
-const ccxtOkx = new ccxt.okx({
-  apiKey: env.okxApiKey,
-  secret: env.okxApiSecret,
-});
-// const okx = new OKX(ccxtOkx);
-
-const ccxtBybit = new ccxt.bybit({
-  apiKey: env.bybitApiKey,
-  secret: env.bybitApiSecret,
-});
-const bybit = new Bybit(ccxtBybit);
-
-const ccxtKucoin = new ccxt.kucoin({
-  apiKey: env.kucoinApiKey,
-  secret: env.kucoinApiSecret,
-});
-// const kucoin = new Kucoin(ccxtKucoin);
-
-const ccxtGateio = new ccxt.gateio({
-  apiKey: env.gateioApiKey,
-  secret: env.gateioApiSecret,
-});
-const gateio = new GateIO(ccxtGateio);
-
-const ccxtHtx = new ccxt.htx({
-  apiKey: env.htxApiKey,
-  secret: env.htxApiSecret,
-});
-const htx = new HTX(ccxtHtx);
-
-const ccxtMexc = new ccxt.mexc({
-  apiKey: env.mexcApiKey,
-  secret: env.mexcApiSecret,
-});
-const mexc = new MEXC(ccxtMexc);
-
-const exchanges = [binance, htx, gateio];
 
 const telegramBotToken = getEnv("telegramBotToken");
-const telegramGroupId = getEnv("telegramGroupId");
+const telegramGroupId = +getEnv("telegramGroupId");
 const bot = new TelegramBot(telegramBotToken, {
   polling: true,
 });
-const publisher = new Telegram(bot, telegramGroupId);
 
-const mutliExchangeCalculator = new MultiExchangeCalculator(exchanges, 0);
-const storage = new FileStorage();
-const formatter = new ArbitrageFormatter();
-
-const multiExchangeArbitrageService = new MultiExchangeArbitrage(
-  mutliExchangeCalculator,
-  formatter,
-  publisher,
-  storage
+const runArbitrageServiceChild = new Monitor(
+  "build/scripts/runArbitrageService.js",
+  {
+    max: 3,
+    minUptime: 120_000,
+    spinSleepTime: 120_000,
+  }
 );
 
-const main = async () => {
-  let iteration = 1;
-  while (true) {
-    console.time(`iteration: ${iteration}`);
-    logger.info(`Iteration: ${iteration}`);
-    await multiExchangeArbitrageService.process();
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
 
-    console.timeEnd(`iteration: ${iteration}`);
-    await sleep(300);
-    iteration++;
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
   }
+
+  runArbitrageServiceChild.start();
+
+  await bot.sendMessage(chatId, "Activated arbitrage calculation...");
+});
+
+bot.onText(/\/stop/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+
+  runArbitrageServiceChild.stop();
+
+  await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
+});
+
+bot.onText(/\/setProfit ([0-9]+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+  const minProfitPercent = match?.[1];
+  if (!minProfitPercent) {
+    return;
+  }
+
+  runArbitrageServiceChild.send({ minProfitPercent: +minProfitPercent });
+
+  await bot.sendMessage(chatId, `Setting min profit to ${minProfitPercent}%`);
+});
+
+const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
+  const perpetrator = msg.from?.username ?? "Someone";
+  const message = `${perpetrator} outside is trying to use the bot`;
+  logger.warn(message, msg);
+  await bot.sendMessage(telegramGroupId, message);
 };
 
-main();
+process.on("uncaughtException", (err) => {
+  logger.error("ERROR", err);
+  logger.error("Node NOT Exiting...");
+});

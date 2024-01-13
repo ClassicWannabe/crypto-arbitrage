@@ -15,6 +15,7 @@
     "@apollo/client": "^3.8.8",
     "ccxt": "^4.2.10",
     "dotenv": "^16.3.1",
+    "forever-monitor": "^3.0.3",
     "graphql": "^16.8.1",
     "lodash-es": "^4.17.21",
     "node-telegram-bot-api": "^0.64.0",
@@ -22,6 +23,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/forever-monitor": "^1.7.9",
     "@types/jest": "^29.5.11",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.10.6",

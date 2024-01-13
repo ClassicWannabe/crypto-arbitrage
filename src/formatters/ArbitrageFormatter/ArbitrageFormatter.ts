@@ -42,7 +42,7 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatSymbol(symbol: string) {
-    return `Пара: ${this.makeBold(symbol)} \n`;
+    return `🤑 Пара: ${this.makeBold(symbol)} 💸\n`;
   }
 
   private formatExchanges(steps: ArbitrageSteps) {
