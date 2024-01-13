@@ -30,7 +30,7 @@ export const currenciesSchema = z.record(z.string(), currencySchema);
 
 export const quotationSchema = z
   .tuple([z.number(), z.number()])
-  .transform(([price, volume]) => ({ price, volume }));
+  .transform(([quote, base]) => ({ quote, base }));
 
 export const orderBookSchema = z.object({
   asks: z.array(quotationSchema),

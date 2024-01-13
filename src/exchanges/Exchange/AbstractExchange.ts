@@ -1,5 +1,5 @@
 import { Exchange as CcxtExchange } from "ccxt";
-import { isNil } from "lodash";
+import { isNil } from "lodash-es";
 
 import { Exchange, Networks, OrderBook } from "../types.js";
 import {

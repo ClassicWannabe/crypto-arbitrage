@@ -1,20 +1,3 @@
-export type Coin = {
-  id: string;
-  symbol: string;
-};
-
-export type CoinPair = {
-  baseCoin: Coin;
-  quoteCoin: Coin;
-  swapPrice: number;
-};
-
-export type TriangularCoinPair = {
-  firstPair: CoinPair;
-  secondPair: CoinPair;
-  thirdPair: CoinPair;
-};
-
 export enum TrasnferOperation {
   DEPOSIT = "deposit",
   WITHDRAW = "withdraw",
@@ -24,19 +7,6 @@ export enum TradeOperation {
   BUY = "buy",
   SELL = "sell",
 }
-
-export type TransferFee = {
-  type: TrasnferOperation;
-  amount: number;
-  network: string;
-};
-
-export type TradeFee = {
-  type: TradeOperation;
-  amount: number;
-};
-
-export type FeeTemp = TransferFee | TradeFee;
 
 export enum FeeType {
   FIXED = "fixed",
@@ -48,51 +18,33 @@ export type Fee = {
   type: FeeType;
 };
 
-export type Quotation = {
-  price: number;
-  volume: number;
-};
-
-export type ArbitrageStep = {
-  exchangeId: string;
-  bestBid: Quotation;
-  bestAsk: Quotation;
-  operation: TradeOperation;
-  price: number;
-};
-
 export type ArbitrageData = {
-  networks: string[];
   symbol: string;
-  fees: FeeTemp[];
-  amount: number;
-  steps: ArbitrageStep[];
+  steps: ArbitrageSteps;
 };
 
 export enum ExchangeEvent {
-  FIRST_TRADE = "firstTrade",
-  LAST_TRADE = "lastTrade",
+  STATUS = "status",
+  TRADE = "trade",
   PAY_FEE = "payFee",
   WITHDRAW = "withdraw",
 }
 
-type CurrencyAmount = {
+export type CurrencyAmount = {
   currencyCode: string;
   amount: number;
 };
 
-export type FirstTradeStep = {
-  event: ExchangeEvent.FIRST_TRADE;
-  operation: TradeOperation;
-  base: CurrencyAmount;
-  quote: CurrencyAmount;
-  exchangeId: string;
+export type StatusStep = {
+  event: ExchangeEvent.STATUS;
+  coin: CurrencyAmount;
 };
 
-export type LastTradeStep = {
-  event: ExchangeEvent.LAST_TRADE;
+export type TradeStep = {
+  event: ExchangeEvent.TRADE;
   operation: TradeOperation;
-  coin: CurrencyAmount;
+  startCoin: CurrencyAmount;
+  endCoin: CurrencyAmount;
   exchangeId: string;
 };
 
@@ -103,8 +55,15 @@ export type FeeStep = Pick<Fee, "type" | "value"> & {
 export type WithdrawStep = {
   event: ExchangeEvent.WITHDRAW;
   network: string;
+  coin: CurrencyAmount;
 };
 
-export type ArbitrageSteps =
-  | [FirstTradeStep, FeeStep, WithdrawStep, FeeStep, LastTradeStep, FeeStep]
-  | [FirstTradeStep, FeeStep, WithdrawStep, FeeStep, LastTradeStep, FeeStep];
+export type ArbitrageSteps = [
+  TradeStep,
+  FeeStep,
+  WithdrawStep,
+  FeeStep,
+  TradeStep,
+  FeeStep,
+  StatusStep,
+];
