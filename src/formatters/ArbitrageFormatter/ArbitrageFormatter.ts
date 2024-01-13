@@ -48,7 +48,7 @@ export class ArbitrageFormatter implements Formatter {
   private formatExchanges(steps: ArbitrageSteps) {
     const exchanges = steps.reduce<string[]>((acc, step) => {
       if (step.event === ExchangeEvent.TRADE) {
-        acc.push(step.exchangeId);
+        acc.push(step.exchangeId.toUpperCase());
       }
       return acc;
     }, []);
@@ -58,7 +58,9 @@ export class ArbitrageFormatter implements Formatter {
   private formatTradeStep(step: TradeStep, symbol: string) {
     const { startCoin, endCoin, exchangeId, operation } = step;
     const operationWord = this.formatOperation(operation);
-    return `Платформа: ${exchangeId}. Операция: ${operationWord} ${symbol}. Обмен ${this.formatCoin(
+    return `Платформа: ${this.makeBold(
+      exchangeId.toUpperCase()
+    )}. Операция: ${operationWord} ${symbol}. Обмен ${this.formatCoin(
       startCoin
     )} на ${this.formatCoin(endCoin)}\n\n`;
   }
