@@ -1,7 +1,7 @@
 import { binance } from "ccxt";
 
-import { AbstractExchange } from "../Exchange/AbstractExchange.js";
-import { currenciesSchema, currencySchema } from "./schema.js";
+import { AbstractExchange } from "../AbstractExchange/AbstractExchange.js";
+import { binanceCurrenciesSchema, binanceCurrencySchema } from "./schema.js";
 
 export class Binance extends AbstractExchange {
   constructor(exchange: binance) {
@@ -17,7 +17,7 @@ export class Binance extends AbstractExchange {
       return null;
     }
 
-    const parsedCurrency = currencySchema.parse(currency);
+    const parsedCurrency = binanceCurrencySchema.parse(currency);
 
     return this.getActiveOrInactiveItem(parsedCurrency, isActive);
   }
@@ -26,6 +26,6 @@ export class Binance extends AbstractExchange {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
 
-    return currenciesSchema.parse(currencies);
+    return binanceCurrenciesSchema.parse(currencies);
   }
 }

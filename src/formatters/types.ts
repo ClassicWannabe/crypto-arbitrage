@@ -1,5 +1,3 @@
-import { ArbitrageData } from "../types.js";
-
 export interface Formatter {
-  format(data: ArbitrageData): string;
+  format(data: unknown): string;
 }

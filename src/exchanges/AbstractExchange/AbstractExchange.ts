@@ -10,10 +10,11 @@ import {
   orderBookSchema,
 } from "../schema.js";
 import { FeeType } from "../../types.js";
+import { logger } from "../../logger/logger.js";
 
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
-  private orderBooks: Record<string, OrderBook> = {};
+  protected orderBooks: Record<string, OrderBook> = {};
   readonly id: string;
 
   constructor(exchange: CcxtExchange) {
@@ -102,22 +103,31 @@ export abstract class AbstractExchange implements Exchange {
   }
 
   async getOrderBook(symbol: string) {
-    let orderBook = this.orderBooks[symbol];
+    const cachedOrderBook = this.orderBooks[symbol];
 
-    if (orderBook) {
-      return orderBook;
+    if (cachedOrderBook) {
+      return cachedOrderBook;
     }
 
-    try {
-      orderBook = await this.exchange.fetchL2OrderBook(symbol);
-    } catch (e) {
-      console.error(e);
+    const orderBook = await this.exchange.fetchOrderBook(symbol);
+
+    const parsedOrderBook = orderBookSchema.parse(orderBook);
+    const bestBid = parsedOrderBook.bids[0];
+    const bestAsk = parsedOrderBook.asks[0];
+
+    if (!bestBid || !bestAsk) {
+      logger.debug(`No best ask and/or bid. ${this.exchange.id}`);
+      return null;
     }
 
-    return orderBookSchema.parse(orderBook);
+    return { ...parsedOrderBook, bestAsk, bestBid };
   }
 
-  async calculateTradingFee(symbol: string) {
+  resetOrderBookCache() {
+    this.orderBooks = {};
+  }
+
+  async getTradingFee(symbol: string) {
     const market = await this.getMarket(symbol);
 
     if (!market) {
@@ -133,7 +143,7 @@ export abstract class AbstractExchange implements Exchange {
     return { value: fee, type: FeeType.FIXED };
   }
 
-  async calculateWithdrawFee(code: string, networkName?: string) {
+  async getWithdrawFee(code: string, networkName?: string) {
     const currency = await this.getCurrency(code);
     const currencyFee = currency?.fee ?? null;
 

@@ -4,9 +4,9 @@ export const marketSchema = z.object({
   base: z.string(),
   quote: z.string(),
   active: z.boolean(),
-  percentage: z.boolean(),
+  percentage: z.boolean().nullish(),
   taker: z.number(),
-  maker: z.number()
+  maker: z.number(),
 });
 
 export const marketsSchema = z.record(z.string(), marketSchema);
@@ -29,8 +29,8 @@ export const currencySchema = z.object({
 export const currenciesSchema = z.record(z.string(), currencySchema);
 
 export const quotationSchema = z
-  .tuple([z.number(), z.number()])
-  .transform(([quote, base]) => ({ quote, base }));
+  .array(z.number())
+  .transform(([quote, base]) => ({ quote: quote ?? 0, base: base ?? 0 }));
 
 export const orderBookSchema = z.object({
   asks: z.array(quotationSchema),

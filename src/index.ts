@@ -1,23 +1,24 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { Monitor } from "forever-monitor";
-import child from "child_process";
 
-import { getEnv } from "./helpers.js";
+import { getEnv, getExchangeDefaultRateLimits } from "./helpers.js";
 import { logger } from "./logger/logger.js";
+import { FileStorage } from "./storages/File/File.js";
+import { ObjectFormatter } from "./formatters/ObjectFormatter/ObjectFormatter.js";
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
 const bot = new TelegramBot(telegramBotToken, {
   polling: true,
 });
+const storage = new FileStorage();
+const objectFormatter = new ObjectFormatter();
 
 const runArbitrageServiceChild = new Monitor(
   "build/scripts/runArbitrageService.js",
   {
     max: 3,
-    minUptime: 120_000,
-    spinSleepTime: 120_000,
   }
 );
 
@@ -59,9 +60,70 @@ bot.onText(/\/setProfit ([0-9]+)/, async (msg, match) => {
     return;
   }
 
-  runArbitrageServiceChild.send({ minProfitPercent: +minProfitPercent });
+  try {
+    await storage.saveArbitrageConfig({ minProfitPercent: +minProfitPercent });
+  } catch (e) {
+    logger.error(e);
+    return;
+  }
 
   await bot.sendMessage(chatId, `Setting min profit to ${minProfitPercent}%`);
+});
+
+bot.onText(/\/config/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+
+  const arbitrageConfig = await storage.getArbitrageConfig();
+
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+});
+
+bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+  const exchange = match?.[1];
+  const rateLimit = match?.[2];
+
+  if (!exchange || !rateLimit) {
+    return;
+  }
+
+  try {
+    await storage.saveArbitrageConfig({
+      rateLimits: {
+        [exchange]: rateLimit,
+      },
+    });
+  } catch (e) {
+    logger.error(e);
+    return;
+  }
+
+  const arbitrageConfig = await storage.getArbitrageConfig();
+
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+});
+
+bot.onText(/\/defaultRateLimits/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+
+  const defaultRateLimits = getExchangeDefaultRateLimits();
+
+  await bot.sendMessage(chatId, objectFormatter.format(defaultRateLimits));
 });
 
 const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
@@ -72,6 +134,6 @@ const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
 };
 
 process.on("uncaughtException", (err) => {
-  logger.error("ERROR", err);
+  logger.error(err.stack);
   logger.error("Node NOT Exiting...");
 });

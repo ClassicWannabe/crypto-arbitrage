@@ -6,7 +6,7 @@ import {
 } from "../schema.js";
 import { Networks } from "../types.js";
 
-export const currencySchema = z.object({
+export const binanceCurrencySchema = z.object({
   ...commonCurrencySchema.shape,
   networks: z.array(networkSchema).transform((networks) =>
     networks.reduce((result: Networks, item) => {
@@ -17,4 +17,7 @@ export const currencySchema = z.object({
   ),
 });
 
-export const currenciesSchema = z.record(z.string(), currencySchema);
+export const binanceCurrenciesSchema = z.record(
+  z.string(),
+  binanceCurrencySchema
+);

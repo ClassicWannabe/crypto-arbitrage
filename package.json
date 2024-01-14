@@ -9,17 +9,20 @@
     "start:dev:windows": "SET NODE_ENV=dev tsx watch src/index.ts",
     "build": "rimraf ./build && tsc",
     "start:prod": "npm run build && NODE_ENV=prod node build/index.js",
-    "start:prod:windows": "npm run build && SET NODE_ENV=prod && node build/index.js"
+    "start:prod:windows": "npm run build && SET NODE_ENV=prod && node build/index.js",
+    "script:arbitrage:prod": "npm run build && NODE_ENV=prod node build/scripts/runArbitrageService.js"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
     "ccxt": "^4.2.10",
+    "deepmerge-ts": "^5.1.0",
     "dotenv": "^16.3.1",
     "forever-monitor": "^3.0.3",
     "graphql": "^16.8.1",
     "lodash-es": "^4.17.21",
     "node-telegram-bot-api": "^0.64.0",
     "winston": "^3.11.0",
+    "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {

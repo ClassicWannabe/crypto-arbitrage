@@ -1,8 +1,8 @@
 import winston from "winston";
 
-import { env } from "../consts.js";
+import { ENV } from "../consts.js";
 
-const logLevel = env.logLevel ?? "info";
+const logLevel = ENV.logLevel ?? "info";
 
 export const logger = winston.createLogger({
   level: logLevel,

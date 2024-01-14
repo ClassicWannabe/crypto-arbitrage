@@ -21,11 +21,9 @@ export interface Exchange {
   getCurrency(code: string, isActive?: boolean): Promise<Currency | null>;
   getNetworks(currencyCode: string, isActive?: boolean): Promise<Networks>;
   getOrderBook(symbol: string): Promise<OrderBook | null>;
-  calculateTradingFee(symbol: string): Promise<Fee | null>;
-  calculateWithdrawFee(
-    code: string,
-    networkName?: string
-  ): Promise<Fee | null>;
+  resetOrderBookCache(): void;
+  getTradingFee(symbol: string): Promise<Fee | null>;
+  getWithdrawFee(code: string, networkName?: string): Promise<Fee | null>;
 }
 
 export type Market = z.infer<typeof marketSchema>;
@@ -34,5 +32,18 @@ export type Currency = z.infer<typeof currencySchema>;
 export type Currencies = z.infer<typeof currenciesSchema>;
 export type Network = z.infer<typeof networkSchema>;
 export type Networks = z.infer<typeof networksSchema>;
-export type OrderBook = z.infer<typeof orderBookSchema>;
 export type Quotation = z.infer<typeof quotationSchema>;
+export type OrderBook = z.infer<typeof orderBookSchema> & {
+  bestBid: Quotation;
+  bestAsk: Quotation;
+};
+
+export enum ExchangeType {
+  BINANCE = "binance",
+  BYBIT = "bybit",
+  GATEIO = "gateio",
+  HTX = "htx",
+  KUCOIN = "kucoin",
+  MEXC = "mexc",
+  OKX = "okx",
+}

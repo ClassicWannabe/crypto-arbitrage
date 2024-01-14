@@ -6,8 +6,12 @@ import { Publisher } from "../../publishers/types.js";
 import { Storage } from "../../storages/types.js";
 import { Service } from "../types.js";
 import { ArbitrageData } from "../../types.js";
+import { logger } from "../../logger/logger.js";
+import { sleep } from "../../helpers.js";
 
 export class MultiExchangeArbitrage implements Service {
+  private exchangesLastReloadDate = new Date();
+
   constructor(
     private readonly calculator: MultiExchangeCalculator,
     private readonly formatter: Formatter,
@@ -17,15 +21,35 @@ export class MultiExchangeArbitrage implements Service {
   ) {}
 
   async process(): Promise<void> {
+    await this.setMinProfitPercent();
+    await this.processArbitrages();
+    await this.reloadExchanges();
+  }
+
+  private async setMinProfitPercent() {
+    const { minProfitPercent } = await this.storage.getArbitrageConfig();
+    this.calculator.setMinProfitPercent(minProfitPercent);
+    logger.info(`Set calculator min profit to ${minProfitPercent}%`);
+  }
+
+  private async processArbitrages() {
     const symbols = await this.storage.getSymbols();
 
-    await Promise.all(
-      chunk(symbols, this.symbolsChunkSize).map(async (symbolsChunk) => {
-        const arbitrages = await this.calculateData(symbolsChunk);
+    let processedSymbolsLength = 0;
+    let iteration = 1;
 
-        this.publishData(arbitrages);
-      })
-    );
+    for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
+      const arbitrages = await this.calculateData(symbolsChunk);
+
+      this.publishData(arbitrages);
+      processedSymbolsLength += this.symbolsChunkSize;
+      console.log("iteration", iteration);
+      iteration++;
+      if (processedSymbolsLength > 2000) {
+        await sleep(120);
+        processedSymbolsLength = 0;
+      }
+    }
   }
 
   private async calculateData(symbols: string[]) {
@@ -45,5 +69,25 @@ export class MultiExchangeArbitrage implements Service {
         await this.publisher.publish(formattedMessage);
       })
     );
+  }
+
+  private async reloadExchanges() {
+    if (!this.isAnyExchangeShouldBeReloaded()) {
+      return;
+    }
+    await this.calculator.reloadAllExchanges();
+    this.exchangesLastReloadDate = new Date();
+  }
+
+  private isAnyExchangeShouldBeReloaded(): boolean {
+    const thirtyMinutes = 30;
+
+    const passedTimeInSeconds =
+      (new Date().getTime() - this.exchangesLastReloadDate.getTime()) / 1000;
+    const passedTimeInMinutes = passedTimeInSeconds / 60;
+    if (passedTimeInMinutes > thirtyMinutes) {
+      return true;
+    }
+    return false;
   }
 }
