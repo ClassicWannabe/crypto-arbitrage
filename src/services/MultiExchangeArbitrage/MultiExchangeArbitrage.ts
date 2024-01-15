@@ -7,7 +7,6 @@ import { Storage } from "../../storages/types.js";
 import { Service } from "../types.js";
 import { ArbitrageData } from "../../types.js";
 import { logger } from "../../logger/logger.js";
-import { sleep } from "../../helpers.js";
 
 export class MultiExchangeArbitrage implements Service {
   private exchangesLastReloadDate = new Date();
@@ -17,7 +16,7 @@ export class MultiExchangeArbitrage implements Service {
     private readonly formatter: Formatter,
     private readonly publisher: Publisher,
     private readonly storage: Storage,
-    private readonly symbolsChunkSize = 100
+    private readonly symbolsChunkSize = 15
   ) {}
 
   async process(): Promise<void> {
@@ -35,20 +34,11 @@ export class MultiExchangeArbitrage implements Service {
   private async processArbitrages() {
     const symbols = await this.storage.getSymbols();
 
-    let processedSymbolsLength = 0;
-    let iteration = 1;
-
     for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
       const arbitrages = await this.calculateData(symbolsChunk);
 
       this.publishData(arbitrages);
-      processedSymbolsLength += this.symbolsChunkSize;
-      console.log("iteration", iteration);
-      iteration++;
-      if (processedSymbolsLength > 2000) {
-        await sleep(120);
-        processedSymbolsLength = 0;
-      }
+      logger.debug("Successfully processed symbols chunk", { symbolsChunk });
     }
   }
 

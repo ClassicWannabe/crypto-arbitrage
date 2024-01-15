@@ -1,12 +1,1 @@
-{
-  "minProfitPercent": 1.5,
-  "rateLimits": {
-    "okx": 1000,
-    "binance": null,
-    "kucoin": null,
-    "mexc": 1000,
-    "bybit": null,
-    "htx": null,
-    "gateio": null
-  }
-}
+{"minProfitPercent":1.5,"rateLimits":{"okx":200,"binance":null,"kucoin":null,"mexc":null,"bybit":null,"htx":null,"gateio":null}}

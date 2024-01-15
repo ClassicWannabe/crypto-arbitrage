@@ -282,6 +282,10 @@ export class MultiExchangeCalculator {
       {
         event: ExchangeEvent.STATUS,
         coin: { amount: finalAmount, currencyCode: quoteCurrencyCode },
+        profitPercent: this.getProfitOrLossPercent(
+          firstTradeStartAmount,
+          finalAmount
+        ),
       },
     ];
 
@@ -370,6 +374,10 @@ export class MultiExchangeCalculator {
       {
         event: ExchangeEvent.STATUS,
         coin: { amount: finalAmount, currencyCode: baseCurrencyCode },
+        profitPercent: this.getProfitOrLossPercent(
+          firstTradeStartAmount,
+          finalAmount
+        ),
       },
     ];
 
@@ -388,7 +396,14 @@ export class MultiExchangeCalculator {
   }
 
   private isArbitrageFeasible(startAmount: number, endAmount: number) {
-    return (endAmount - startAmount) / startAmount >= this.minProfitPercent;
+    return (
+      this.getProfitOrLossPercent(startAmount, endAmount) >=
+      this.minProfitPercent
+    );
+  }
+
+  private getProfitOrLossPercent(startAmount: number, endAmount: number) {
+    return ((endAmount - startAmount) * 100) / startAmount;
   }
 
   private async calculateFees({

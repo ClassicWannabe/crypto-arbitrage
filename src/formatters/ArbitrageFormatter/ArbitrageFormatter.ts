@@ -86,14 +86,23 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatStatusStep(step: StatusStep) {
-    return `Итого: ${this.formatCoin(step.coin)}\n\n`;
+    return `Итого: ${this.formatCoin(step.coin)}. Прибыль: ${this.formatNumber(
+      step.profitPercent,
+      3
+    )}%\n\n`;
   }
 
   private formatCoin(coin: CurrencyAmount) {
-    return this.makeBold(`${coin.amount} ${coin.currencyCode}`);
+    return this.makeBold(
+      `${this.formatNumber(coin.amount, 18)} ${coin.currencyCode}`
+    );
   }
 
   private makeBold(text: string) {
     return `<b>${text}</b>`;
+  }
+
+  private formatNumber(num: number, maximumFractionDigits?: number) {
+    return num.toLocaleString(undefined, { maximumFractionDigits });
   }
 }

@@ -2,3 +2,7 @@ node_modules
 build
 temp
 .env
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out

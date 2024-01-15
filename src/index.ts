@@ -64,7 +64,7 @@ bot.onText(/\/setProfit ([0-9]+)/, async (msg, match) => {
     await storage.saveArbitrageConfig({ minProfitPercent: +minProfitPercent });
   } catch (e) {
     logger.error(e);
-    return;
+    return handleFailedRequest(chatId);
   }
 
   await bot.sendMessage(chatId, `Setting min profit to ${minProfitPercent}%`);
@@ -94,18 +94,18 @@ bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
   const rateLimit = match?.[2];
 
   if (!exchange || !rateLimit) {
-    return;
+    return handleFailedRequest(chatId);
   }
 
   try {
     await storage.saveArbitrageConfig({
       rateLimits: {
-        [exchange]: rateLimit,
+        [exchange]: +rateLimit,
       },
     });
   } catch (e) {
     logger.error(e);
-    return;
+    return handleFailedRequest(chatId);
   }
 
   const arbitrageConfig = await storage.getArbitrageConfig();
@@ -131,6 +131,10 @@ const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
   const message = `${perpetrator} outside is trying to use the bot`;
   logger.warn(message, msg);
   await bot.sendMessage(telegramGroupId, message);
+};
+
+const handleFailedRequest = async (chatId: number) => {
+  await bot.sendMessage(chatId, "Something went wrong...");
 };
 
 process.on("uncaughtException", (err) => {

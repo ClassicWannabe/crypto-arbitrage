@@ -42,8 +42,6 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrage(
 
 const main = async () => {
   const fiveMinInSeconds = 5 * 60;
-  const tenMinInSeconds = 10 * 60;
-  let timerSleep = fiveMinInSeconds;
   let iteration = 1;
   while (true) {
     try {
@@ -53,12 +51,13 @@ const main = async () => {
     } catch (e) {
       console.log(e);
 
-      await bot.sendMessage(telegramGroupId, "Arbitrage calculation failed...");
-      timerSleep = tenMinInSeconds;
+      await bot.sendMessage(
+        telegramGroupId,
+        "Arbitrage calculation failed... Stopped for 5 min"
+      );
+      await sleep(fiveMinInSeconds);
     }
 
-    await sleep(timerSleep);
-    timerSleep = fiveMinInSeconds;
     iteration++;
   }
 };

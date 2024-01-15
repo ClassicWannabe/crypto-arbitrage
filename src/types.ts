@@ -38,6 +38,7 @@ export type CurrencyAmount = {
 export type StatusStep = {
   event: ExchangeEvent.STATUS;
   coin: CurrencyAmount;
+  profitPercent: number;
 };
 
 export type TradeStep = {
@@ -67,3 +68,8 @@ export type ArbitrageSteps = [
   FeeStep,
   StatusStep,
 ];
+
+export enum NODE_ENV {
+  PROD = "prod",
+  DEV = "dev",
+}
