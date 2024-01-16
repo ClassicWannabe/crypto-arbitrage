@@ -17,6 +17,8 @@ sudo git clone git@github.com:ClassicWannabe/crypto-arbitrage.git /home/ec2-user
 
 sudo aws ssm get-parameter --with-decryption --name /crypto-arbitrage/env --output text --query Parameter.Value > /home/ec2-user/arbitrage-app/.env
 
+sudo cd /home/ec2-user/arbitrage-app
+
 sudo yarn install --prod
 
 sudo yarn start:prod
