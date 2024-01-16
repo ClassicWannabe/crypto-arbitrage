@@ -14,7 +14,8 @@
     "start:prod": "yarn build &&  NODE_ENV=prod node build/index.js",
     "start:prod:windows": "yarn build && SET NODE_ENV=prod && node build/index.js",
     "script:arbitrage:prod": "yarn build && NODE_ENV=prod node build/scripts/runArbitrageService.js",
-    "script:arbitrage:dev": "yarn build && NODE_ENV=dev node build/scripts/runArbitrageService.js"
+    "script:arbitrage:dev": "yarn build && NODE_ENV=dev node build/scripts/runArbitrageService.js",
+    "deploy": "npx cdk deploy"
   },
   "dependencies": {
     "@apollo/client": "^3.8.8",
