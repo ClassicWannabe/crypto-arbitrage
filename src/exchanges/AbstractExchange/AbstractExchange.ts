@@ -14,7 +14,7 @@ import { logger } from "../../logger/logger.js";
 
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
-  protected orderBooks: Record<string, OrderBook> = {};
+  private orderBooks: Record<string, OrderBook> = {};
   readonly id: string;
 
   constructor(exchange: CcxtExchange) {
@@ -102,14 +102,18 @@ export abstract class AbstractExchange implements Exchange {
     return null;
   }
 
-  async getOrderBook(symbol: string) {
+  async getOrderBook(symbol: string, limit?: number) {
     const cachedOrderBook = this.orderBooks[symbol];
 
     if (cachedOrderBook) {
       return cachedOrderBook;
     }
+    const orderBookLimit = limit ? this.getOrderBookLimit(limit) : undefined;
 
-    const orderBook = await this.exchange.fetchOrderBook(symbol);
+    const orderBook = await this.exchange.fetchOrderBook(
+      symbol,
+      orderBookLimit
+    );
 
     const parsedOrderBook = orderBookSchema.parse(orderBook);
     const bestBid = parsedOrderBook.bids[0];
@@ -119,8 +123,18 @@ export abstract class AbstractExchange implements Exchange {
       logger.debug(`No best ask and/or bid. ${this.exchange.id}`);
       return null;
     }
+    const modifiedOrderBook = { ...parsedOrderBook, bestAsk, bestBid };
 
-    return { ...parsedOrderBook, bestAsk, bestBid };
+    this.orderBooks[symbol] = modifiedOrderBook;
+
+    return modifiedOrderBook;
+  }
+
+  private getOrderBookLimit(limit: number) {
+    if (limit < 20) {
+      return 20;
+    }
+    return limit;
   }
 
   resetOrderBookCache() {

@@ -56,13 +56,16 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatTradeStep(step: TradeStep, symbol: string) {
-    const { startCoin, endCoin, exchangeId, operation } = step;
+    const { startCoin, endCoin, exchangeId, operation, price } = step;
     const operationWord = this.formatOperation(operation);
-    return `Платформа: ${this.makeBold(
+    const exchangeString = `Платформа: ${this.makeBold(
       exchangeId.toUpperCase()
-    )}. Операция: ${operationWord} ${symbol}. Обмен ${this.formatCoin(
+    )}`;
+    const priceString = `Цена: ${this.makeBold(this.formatNumber(price))}`;
+    const operationString = `Операция: ${operationWord} ${symbol}. Обмен ${this.formatCoin(
       startCoin
-    )} на ${this.formatCoin(endCoin)}\n\n`;
+    )} на ${this.formatCoin(endCoin)}`;
+    return `${exchangeString}. ${priceString}.\n${operationString}\n\n`;
   }
 
   private formatOperation(operation: TradeOperation) {
@@ -94,7 +97,7 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatCoin(coin: CurrencyAmount) {
     return this.makeBold(
-      `${this.formatNumber(coin.amount, 18)} ${coin.currencyCode}`
+      `${this.formatNumber(coin.amount)} ${coin.currencyCode}`
     );
   }
 
@@ -102,7 +105,7 @@ export class ArbitrageFormatter implements Formatter {
     return `<b>${text}</b>`;
   }
 
-  private formatNumber(num: number, maximumFractionDigits?: number) {
+  private formatNumber(num: number, maximumFractionDigits: number = 18) {
     return num.toLocaleString(undefined, { maximumFractionDigits });
   }
 }

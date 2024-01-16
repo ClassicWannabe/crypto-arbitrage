@@ -20,7 +20,7 @@ export interface Exchange {
   getCurrencies(): Promise<Currencies>;
   getCurrency(code: string, isActive?: boolean): Promise<Currency | null>;
   getNetworks(currencyCode: string, isActive?: boolean): Promise<Networks>;
-  getOrderBook(symbol: string): Promise<OrderBook | null>;
+  getOrderBook(symbol: string, limit?: number): Promise<OrderBook | null>;
   resetOrderBookCache(): void;
   getTradingFee(symbol: string): Promise<Fee | null>;
   getWithdrawFee(code: string, networkName?: string): Promise<Fee | null>;

@@ -29,6 +29,23 @@ export class AwsCdkStack extends cdk.Stack {
         ),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"),
       ],
+      inlinePolicies: {
+        parameterStore: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: ["ssm:DescribeParameters"],
+              resources: ["*"],
+            }),
+            new iam.PolicyStatement({
+              actions: ["ssm:GetParameters"],
+              resources: [
+                "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
+                "arn:aws:ssm:eu-central-1:654654636079:parameter/github/deploy-key",
+              ],
+            }),
+          ],
+        }),
+      },
     });
 
     const keyPair = ec2.KeyPair.fromKeyPairAttributes(this, "KeyPair", {

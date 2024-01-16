@@ -1,11 +1,20 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { Monitor } from "forever-monitor";
+import url from "url";
+import path from "path";
 
-import { getEnv, getExchangeDefaultRateLimits } from "./helpers.js";
+import {
+  getEnv,
+  getExchangeDefaultRateLimits,
+  populateObject,
+} from "./helpers.js";
 import { logger } from "./logger/logger.js";
 import { FileStorage } from "./storages/File/File.js";
 import { ObjectFormatter } from "./formatters/ObjectFormatter/ObjectFormatter.js";
+
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
@@ -16,7 +25,7 @@ const storage = new FileStorage();
 const objectFormatter = new ObjectFormatter();
 
 const runArbitrageServiceChild = new Monitor(
-  "build/scripts/runArbitrageService.js",
+  path.resolve(__dirname + "/scripts/runArbitrageService.js"),
   {
     max: 3,
   }
@@ -113,6 +122,40 @@ bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
   await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
 });
 
+bot.onText(
+  /\/set ([a-zA-Z]+)(\.[a-zA-Z]+)*=[a-zA-Z0-9]+/,
+  async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    if (chatId !== telegramGroupId) {
+      await handleUnwantedRequest(msg);
+      return;
+    }
+    const command = match?.[0];
+    if (!command) {
+      return handleFailedRequest(chatId);
+    }
+    const [keysString, value] = command.replace("/set ", "").split("=");
+
+    if (!keysString || !value) {
+      return handleFailedRequest(chatId);
+    }
+    const keys = keysString.split(".");
+    const config = populateObject(keys, value);
+
+    try {
+      await storage.saveArbitrageConfig(config);
+    } catch (e) {
+      logger.error(e);
+      return handleFailedRequest(chatId);
+    }
+
+    const arbitrageConfig = await storage.getArbitrageConfig();
+
+    await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+  }
+);
+
 bot.onText(/\/defaultRateLimits/, async (msg) => {
   const chatId = msg.chat.id;
 
@@ -136,6 +179,8 @@ const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
 const handleFailedRequest = async (chatId: number) => {
   await bot.sendMessage(chatId, "Something went wrong...");
 };
+
+await bot.sendMessage(telegramGroupId, "I am revived!");
 
 process.on("uncaughtException", (err) => {
   logger.error(err.stack);

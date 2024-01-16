@@ -46,6 +46,7 @@ export type TradeStep = {
   operation: TradeOperation;
   startCoin: CurrencyAmount;
   endCoin: CurrencyAmount;
+  price: number
   exchangeId: string;
 };
 

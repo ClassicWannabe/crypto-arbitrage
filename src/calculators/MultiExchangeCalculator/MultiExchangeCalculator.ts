@@ -155,8 +155,8 @@ export class MultiExchangeCalculator {
 
       const [withdrawExchangeOrderBook, depositExchangeOrderBook] =
         await Promise.all([
-          withdrawExchange.getOrderBook(symbol),
-          depositExchange.getOrderBook(symbol),
+          withdrawExchange.getOrderBook(symbol, 1),
+          depositExchange.getOrderBook(symbol, 1),
         ]);
 
       if (!withdrawExchangeOrderBook || !depositExchangeOrderBook) {
@@ -218,8 +218,8 @@ export class MultiExchangeCalculator {
       withdrawExchangeOrderBook.bestAsk.base,
       depositExchangeOrderBook.bestBid.base
     );
-    const firstTradeStartAmount =
-      firstTradeEndAmount * withdrawExchangeOrderBook.bestAsk.quote;
+    const firstTradePrice = withdrawExchangeOrderBook.bestAsk.quote;
+    const firstTradeStartAmount = firstTradeEndAmount * firstTradePrice;
 
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
       await this.calculateFees({
@@ -234,6 +234,7 @@ export class MultiExchangeCalculator {
       withdrawExchangeTradeFee
     );
     const lastTradeStartAmount = this.deductFee(withdrawAmount, withdrawFee);
+    const lastTradePrice = depositExchangeOrderBook.bestBid.quote;
     const lastTradeEndAmount =
       depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount;
     const finalAmount = this.deductFee(
@@ -254,6 +255,7 @@ export class MultiExchangeCalculator {
           amount: firstTradeEndAmount,
           currencyCode: baseCurrencyCode,
         },
+        price: firstTradePrice,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -277,6 +279,7 @@ export class MultiExchangeCalculator {
           amount: lastTradeEndAmount,
           currencyCode: quoteCurrencyCode,
         },
+        price: lastTradePrice,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {
@@ -310,6 +313,7 @@ export class MultiExchangeCalculator {
       withdrawExchangeOrderBook.bestBid.base,
       depositExchangeOrderBook.bestAsk.base
     );
+    const firstTradePrice = withdrawExchangeOrderBook.bestBid.quote;
     const firstTradeEndAmount =
       firstTradeStartAmount * withdrawExchangeOrderBook.bestBid.quote;
 
@@ -326,8 +330,8 @@ export class MultiExchangeCalculator {
       withdrawExchangeTradeFee
     );
     const lastTradeStartAmount = this.deductFee(withdrawAmount, withdrawFee);
-    const lastTradeEndAmount =
-      lastTradeStartAmount / depositExchangeOrderBook.bestAsk.quote;
+    const lastTradePrice = depositExchangeOrderBook.bestAsk.quote;
+    const lastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
     const finalAmount = this.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
@@ -346,6 +350,7 @@ export class MultiExchangeCalculator {
           amount: firstTradeEndAmount,
           currencyCode: quoteCurrencyCode,
         },
+        price: firstTradePrice,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -369,6 +374,7 @@ export class MultiExchangeCalculator {
           amount: lastTradeEndAmount,
           currencyCode: baseCurrencyCode,
         },
+        price: lastTradePrice,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {

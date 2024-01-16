@@ -7,16 +7,18 @@ import { Storage } from "../../storages/types.js";
 import { Service } from "../types.js";
 import { ArbitrageData } from "../../types.js";
 import { logger } from "../../logger/logger.js";
+import { sleep } from "../../helpers.js";
 
 export class MultiExchangeArbitrage implements Service {
   private exchangesLastReloadDate = new Date();
+  private symbolPointer = 0;
 
   constructor(
     private readonly calculator: MultiExchangeCalculator,
     private readonly formatter: Formatter,
     private readonly publisher: Publisher,
     private readonly storage: Storage,
-    private readonly symbolsChunkSize = 15
+    private readonly symbolsChunkSize: number
   ) {}
 
   async process(): Promise<void> {
@@ -32,13 +34,26 @@ export class MultiExchangeArbitrage implements Service {
   }
 
   private async processArbitrages() {
+    logger.info(
+      `Symbols chunk size: ${this.symbolsChunkSize}. Symbol pointer: ${this.symbolPointer}`
+    );
     const symbols = await this.storage.getSymbols();
+    const unprocessedSymbols = symbols.slice(this.symbolPointer);
 
-    for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
+    let iteration = 1;
+    for (const symbolsChunk of chunk(
+      unprocessedSymbols,
+      this.symbolsChunkSize
+    )) {
       const arbitrages = await this.calculateData(symbolsChunk);
 
       this.publishData(arbitrages);
-      logger.debug("Successfully processed symbols chunk", { symbolsChunk });
+      logger.info("Successfully processed symbols chunk", {
+        symbolsChunk,
+        processedNumber: iteration * this.symbolsChunkSize,
+      });
+      this.symbolPointer = iteration * this.symbolsChunkSize;
+      iteration++;
     }
   }
 
@@ -67,6 +82,9 @@ export class MultiExchangeArbitrage implements Service {
     }
     await this.calculator.reloadAllExchanges();
     this.exchangesLastReloadDate = new Date();
+    const sixtySeconds = 60;
+    await sleep(sixtySeconds);
+    logger.info("Sleep 1 minute after reloading markets...");
   }
 
   private isAnyExchangeShouldBeReloaded(): boolean {

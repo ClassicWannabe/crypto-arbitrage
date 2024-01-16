@@ -14,6 +14,7 @@ export const rateLimitsSchema = z.object({
 
 export const arbitrageConfigSchema = z.object({
   minProfitPercent: z.number().min(0),
+  parallelProcessSymbolNumber: z.number().min(1),
   rateLimits: rateLimitsSchema,
 });
 

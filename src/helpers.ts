@@ -33,3 +33,27 @@ export const getExchangeDefaultRateLimits = (): Required<RateLimits> => {
     okx: new ccxt.okx().rateLimit,
   };
 };
+
+export const populateObject = (
+  keys: string[],
+  value: unknown,
+  object: Record<string, unknown> = {}
+): Record<string, unknown> => {
+  if (keys.length === 0) {
+    return object;
+  }
+  if (keys.length === 1 && keys[0]) {
+    object[keys[0]] = value;
+    return object;
+  }
+  const [key, ...otherKeys] = keys;
+  if (!key) {
+    return object;
+  }
+  object[key] = {};
+  return populateObject(
+    otherKeys,
+    value,
+    object[key] as Record<string, unknown>
+  );
+};

@@ -37,7 +37,8 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrage(
   mutliExchangeCalculator,
   formatter,
   publisher,
-  storage
+  storage,
+  arbitrageConfig.parallelProcessSymbolNumber
 );
 
 const main = async () => {
