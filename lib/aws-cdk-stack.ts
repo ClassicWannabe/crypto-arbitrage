@@ -10,16 +10,6 @@ export class CryptoArbitrageStack extends cdk.Stack {
     super(scope, id, props);
 
     const defaultvpc = ec2.Vpc.fromLookup(this, "vpc", { isDefault: true });
-    const codeInS3 = new s3.Bucket(
-      this,
-      "crypto-arbitrage-source-code-bucket",
-      {
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        enforceSSL: true,
-        versioned: false,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
 
     const instanceRole = new iam.Role(this, "arbitrage-bot-role", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
