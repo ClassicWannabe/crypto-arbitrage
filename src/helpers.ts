@@ -50,10 +50,6 @@ export const populateObject = (
   if (!key) {
     return object;
   }
-  object[key] = {};
-  return populateObject(
-    otherKeys,
-    value,
-    object[key] as Record<string, unknown>
-  );
+  object[key] = populateObject(otherKeys, value);
+  return object;
 };

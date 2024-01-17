@@ -123,7 +123,7 @@ bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
 });
 
 bot.onText(
-  /\/set ([a-zA-Z]+)(\.[a-zA-Z]+)*=[a-zA-Z0-9]+/,
+  /\/set ([a-zA-Z]+)(\.[a-zA-Z]+)*=[a-zA-Z0-9\.]+/,
   async (msg, match) => {
     const chatId = msg.chat.id;
 
@@ -140,8 +140,9 @@ bot.onText(
     if (!keysString || !value) {
       return handleFailedRequest(chatId);
     }
+    const isNumberValue = !Number.isNaN(Number(value));
     const keys = keysString.split(".");
-    const config = populateObject(keys, value);
+    const config = populateObject(keys, isNumberValue ? +value : value);
 
     try {
       await storage.saveArbitrageConfig(config);
