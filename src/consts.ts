@@ -19,8 +19,5 @@ export const ENV = {
   mexcApiSecret: process.env.MEXC_API_SECRET,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   telegramGroupId: process.env.TELEGRAM_GROUP_ID,
-} as const;
-
-export const RATE_LIMITS_IN_MS = {
-  okx: 1000,
+  telegramDeveloperId: process.env.TELEGRAM_DEVELOPER_ID,
 } as const;

@@ -28,6 +28,7 @@ const exchanges = [mexc, binance, htx, gateio, okx, bybit, kucoin];
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = getEnv("telegramGroupId");
+const telegramDeveloperId = getEnv("telegramDeveloperId");
 const bot = new TelegramBot(telegramBotToken);
 const publisher = new Telegram(bot, telegramGroupId);
 
@@ -50,8 +51,12 @@ const main = async () => {
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");
     } catch (e) {
-      console.log(e);
+      const error = e as Error;
+      console.log(error);
 
+      if (error.stack) {
+        await bot.sendMessage(telegramDeveloperId, error.stack);
+      }
       await bot.sendMessage(
         telegramGroupId,
         "Arbitrage calculation failed... Stopped for 5 min"

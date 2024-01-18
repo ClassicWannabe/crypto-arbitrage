@@ -16,7 +16,8 @@ mkdir ~/arbitrage-app
 git clone git@github.com:ClassicWannabe/crypto-arbitrage.git ~/arbitrage-app/
 aws ssm get-parameter --with-decryption --name /crypto-arbitrage/env --output text --query Parameter.Value > ~/arbitrage-app/.env
 
+# Start the app
 cd ~/arbitrage-app
 sudo npm install -g yarn
-yarn install --prod
+yarn install
 yarn start:prod
