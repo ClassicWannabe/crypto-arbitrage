@@ -157,6 +157,56 @@ bot.onText(
   }
 );
 
+bot.onText(/\/addIgnoredSymbol (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+  const ignoredSymbol = match?.[1];
+
+  if (!ignoredSymbol) {
+    return handleFailedRequest(chatId);
+  }
+
+  try {
+    await storage.addIgnoredSymbol(ignoredSymbol);
+  } catch (e) {
+    logger.error(e);
+    return handleFailedRequest(chatId);
+  }
+
+  const arbitrageConfig = await storage.getArbitrageConfig();
+
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+});
+
+bot.onText(/\/removeIgnoredSymbol (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+  const ignoredSymbol = match?.[1];
+
+  if (!ignoredSymbol) {
+    return handleFailedRequest(chatId);
+  }
+
+  try {
+    await storage.removeIgnoredSymbol(ignoredSymbol);
+  } catch (e) {
+    logger.error(e);
+    return handleFailedRequest(chatId);
+  }
+
+  const arbitrageConfig = await storage.getArbitrageConfig();
+
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+});
+
 bot.onText(/\/defaultRateLimits/, async (msg) => {
   const chatId = msg.chat.id;
 

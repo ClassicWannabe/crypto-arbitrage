@@ -1,5 +1,4 @@
 import fs from "fs/promises";
-import { deepmerge } from "deepmerge-ts";
 
 import { DeepPartialArbitrageConfig, Storage } from "../types.js";
 import { ARBITRAGE_CONFIG_PATH, SYMBOLS_PATH } from "./consts.js";
@@ -7,6 +6,7 @@ import {
   arbitrageConfigSchema,
   deepPartialArbitrageConfigSchema,
 } from "../schema.js";
+import { customDeepmerge } from "../helpers.js";
 
 export class FileStorage implements Storage {
   async getSymbols(): Promise<string[]> {
@@ -19,6 +19,33 @@ export class FileStorage implements Storage {
     await this.saveJsonFile(SYMBOLS_PATH, symbols);
   }
 
+  async addIgnoredSymbol(symbol: string): Promise<void> {
+    const storedSymbols = await this.getSymbols();
+    const foundSymbol = storedSymbols.find(
+      (storedSymbol) => storedSymbol.toLowerCase() === symbol.toLowerCase()
+    );
+    if (!foundSymbol) {
+      throw new Error(
+        "Cannot save symbol to ignore because it is missing in the tracking list"
+      );
+    }
+    const config = await this.getArbitrageConfig();
+    const ignoredSymbols = [
+      ...new Set([...config.ignoredSymbols, foundSymbol]),
+    ];
+
+    await this.saveArbitrageConfig({ ...config, ignoredSymbols });
+  }
+
+  async removeIgnoredSymbol(symbol: string): Promise<void> {
+    const config = await this.getArbitrageConfig();
+    const ignoredSymbols = config.ignoredSymbols.filter(
+      (ignoredSymbol) => ignoredSymbol.toLowerCase() !== symbol.toLowerCase()
+    );
+
+    await this.saveArbitrageConfig({ ...config, ignoredSymbols });
+  }
+
   async getArbitrageConfig() {
     const config = await this.getJsonFile(ARBITRAGE_CONFIG_PATH);
 
@@ -28,7 +55,7 @@ export class FileStorage implements Storage {
   async saveArbitrageConfig(config: DeepPartialArbitrageConfig) {
     const parsedConfig = deepPartialArbitrageConfigSchema.parse(config);
     const oldConfig = await this.getArbitrageConfig();
-    const mergedConfig = deepmerge(oldConfig, parsedConfig);
+    const mergedConfig = customDeepmerge(oldConfig, parsedConfig);
 
     await this.saveJsonFile(ARBITRAGE_CONFIG_PATH, mergedConfig);
   }

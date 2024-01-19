@@ -18,7 +18,8 @@ export class MultiExchangeArbitrage implements Service {
     private readonly formatter: Formatter,
     private readonly publisher: Publisher,
     private readonly storage: Storage,
-    private readonly symbolsChunkSize: number
+    private readonly symbolsChunkSize: number,
+    private readonly ignoredSymbols: string[]
   ) {}
 
   async process(): Promise<void> {
@@ -37,14 +38,10 @@ export class MultiExchangeArbitrage implements Service {
     logger.info(
       `Symbols chunk size: ${this.symbolsChunkSize}. Symbol pointer: ${this.symbolPointer}`
     );
-    const symbols = await this.storage.getSymbols();
-    const unprocessedSymbols = symbols.slice(this.symbolPointer);
+    const symbols = await this.getSymbols();
 
     let iteration = 1;
-    for (const symbolsChunk of chunk(
-      unprocessedSymbols,
-      this.symbolsChunkSize
-    )) {
+    for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
       const arbitrages = await this.calculateData(symbolsChunk);
 
       this.publishData(arbitrages);
@@ -55,6 +52,14 @@ export class MultiExchangeArbitrage implements Service {
       this.symbolPointer = iteration * this.symbolsChunkSize;
       iteration++;
     }
+  }
+
+  private async getSymbols() {
+    const allSymbols = await this.storage.getSymbols();
+    const trackedSymbols = allSymbols.filter(
+      (symbol) => !this.ignoredSymbols.includes(symbol)
+    );
+    return trackedSymbols.slice(this.symbolPointer);
   }
 
   private async calculateData(symbols: string[]) {

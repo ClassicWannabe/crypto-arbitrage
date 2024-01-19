@@ -39,7 +39,8 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrage(
   formatter,
   publisher,
   storage,
-  arbitrageConfig.parallelProcessSymbolNumber
+  arbitrageConfig.parallelProcessSymbolNumber,
+  arbitrageConfig.ignoredSymbols
 );
 
 const main = async () => {
@@ -50,6 +51,9 @@ const main = async () => {
       logger.info(`Start arbitrage service. Iteration: ${iteration}`);
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");
+      
+      await bot.sendMessage(telegramGroupId, `Finish iteration ${iteration}`)
+      iteration++;
     } catch (e) {
       const error = e as Error;
       console.log(error);
@@ -64,7 +68,7 @@ const main = async () => {
       await sleep(fiveMinInSeconds);
     }
 
-    iteration++;
+   
   }
 };
 

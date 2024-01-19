@@ -9,6 +9,8 @@ import {
 export interface Storage {
   getSymbols(): Promise<string[]>;
   saveSymbols(symbols: string[]): Promise<void>;
+  addIgnoredSymbol(symbol: string): Promise<void>;
+  removeIgnoredSymbol(symbol: string): Promise<void>;
   getArbitrageConfig(): Promise<ArbitrageConfig>;
   saveArbitrageConfig(config: Partial<ArbitrageConfig>): Promise<void>;
 }
