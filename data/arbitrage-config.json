@@ -1,1 +1,14 @@
-{"minProfitPercent":1.5,"parallelProcessSymbolNumber":5,"rateLimits":{"okx":200,"binance":null,"kucoin":null,"mexc":5000,"bybit":null,"htx":null,"gateio":null},"ignoredSymbols":[]}
+{
+  "minProfitPercent": 1.5,
+  "parallelProcessSymbolNumber": 5,
+  "rateLimits": {
+    "okx": 200,
+    "binance": null,
+    "kucoin": null,
+    "mexc": 5000,
+    "bybit": null,
+    "htx": null,
+    "gateio": null
+  },
+  "ignoredSymbols": ["TIME/USDT", "GEM/USDT", "SOLS/USDT"]
+}

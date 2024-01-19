@@ -1,5 +1,6 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
+import { shuffle } from "lodash-es";
 
 import { MultiExchangeCalculator } from "../calculators/MultiExchangeCalculator/MultiExchangeCalculator.js";
 import { logger } from "../logger/logger.js";
@@ -44,6 +45,44 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrage(
 );
 
 const main = async () => {
+  await updateSymbols();
+  await findPairs();
+};
+
+const updateSymbols = async () => {
+  try {
+    const markets = await Promise.all(
+      exchanges.map((exchange) => exchange.getMarkets())
+    );
+  
+    const symbols = new Set<string>();
+    for (const market of markets) {
+      const marketSymbols = Object.keys(market);
+  
+      for (const marketSymbol of marketSymbols) {
+        symbols.add(marketSymbol);
+      }
+    }
+  
+    const shuffledSymbols = shuffle([...symbols]);
+  
+    await storage.saveSymbols(shuffledSymbols);
+  }catch (e) {
+    const error = e as Error;
+    console.log(error);
+
+    if (error.stack) {
+      await bot.sendMessage(telegramDeveloperId, error.stack);
+    }
+    await bot.sendMessage(
+      telegramGroupId,
+      "Could not update symbols"
+    );
+  }
+
+};
+
+const findPairs = async () => {
   const fiveMinInSeconds = 5 * 60;
   let iteration = 1;
   while (true) {
@@ -51,8 +90,8 @@ const main = async () => {
       logger.info(`Start arbitrage service. Iteration: ${iteration}`);
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");
-      
-      await bot.sendMessage(telegramGroupId, `Finish iteration ${iteration}`)
+
+      await bot.sendMessage(telegramGroupId, `Finish iteration ${iteration}`);
       iteration++;
     } catch (e) {
       const error = e as Error;
@@ -67,8 +106,6 @@ const main = async () => {
       );
       await sleep(fiveMinInSeconds);
     }
-
-   
   }
 };
 

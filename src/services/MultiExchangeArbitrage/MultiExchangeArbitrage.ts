@@ -40,18 +40,20 @@ export class MultiExchangeArbitrage implements Service {
     );
     const symbols = await this.getSymbols();
 
-    let iteration = 1;
+    let iteration = this.symbolPointer / this.symbolsChunkSize + 1;
     for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
       const arbitrages = await this.calculateData(symbolsChunk);
 
       this.publishData(arbitrages);
       logger.info("Successfully processed symbols chunk", {
         symbolsChunk,
+        iteration,
         processedNumber: iteration * this.symbolsChunkSize,
       });
       this.symbolPointer = iteration * this.symbolsChunkSize;
       iteration++;
     }
+    this.symbolPointer = 0;
   }
 
   private async getSymbols() {
@@ -81,8 +83,8 @@ export class MultiExchangeArbitrage implements Service {
     );
   }
 
-  private async reloadExchanges() {
-    if (!this.isAnyExchangeShouldBeReloaded()) {
+  private async reloadExchanges(force = false) {
+    if (!this.isAnyExchangeShouldBeReloaded() && !force) {
       return;
     }
     await this.calculator.reloadAllExchanges();
