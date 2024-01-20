@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
 
@@ -9,6 +10,11 @@ export class CryptoArbitrageStack extends cdk.Stack {
     super(scope, id, props);
 
     const defaultvpc = ec2.Vpc.fromLookup(this, "vpc", { isDefault: true });
+
+    const logGroup = new logs.LogGroup(this, "crypto-arbitrage", {
+      logGroupName: "crypto-arbitrage.log",
+      retention: logs.RetentionDays.ONE_MONTH,
+    });
 
     const instanceRole = new iam.Role(this, "arbitrage-bot-role", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
