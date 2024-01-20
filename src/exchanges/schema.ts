@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const marketSchema = z.object({
+  symbol: z.string(),
   base: z.string(),
   quote: z.string(),
   active: z.boolean(),

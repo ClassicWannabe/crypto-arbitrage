@@ -28,6 +28,8 @@ const runArbitrageServiceChild = new Monitor(
   path.resolve(__dirname + "/scripts/runArbitrageService.js")
 );
 
+runArbitrageServiceChild.start();
+
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
 
