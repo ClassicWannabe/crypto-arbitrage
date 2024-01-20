@@ -8,13 +8,12 @@
     "aws-cdk": "bin/aws-cdk.js"
   },
   "scripts": {
-    "start:dev": "NODE_ENV=dev && tsx watch src/index.ts",
-    "start:dev:windows": "SET NODE_ENV=dev tsx watch src/index.ts",
+    "start:dev": "tsx watch src/index.ts",
+    "start:prod": "yarn build && forever build/index.js",
     "build": "rimraf ./build && tsc",
-    "start:prod": "yarn build && NODE_ENV=prod forever build/index.js > server.log",
-    "start:prod:windows": "yarn build && SET NODE_ENV=prod && forever build/index.js",
-    "script:arbitrage:prod": "yarn build && NODE_ENV=prod node build/scripts/runArbitrageService.js",
-    "script:arbitrage:dev": "yarn build && NODE_ENV=dev node build/scripts/runArbitrageService.js",
+    "test": "vitest",
+    "script:arbitrage:prod": "yarn build && node build/scripts/runArbitrageService.js",
+    "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageService.ts",
     "deploy": "npx cdk deploy",
     "destroy": "npx cdk destroy"
   },

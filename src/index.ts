@@ -25,10 +25,7 @@ const storage = new FileStorage();
 const objectFormatter = new ObjectFormatter();
 
 const runArbitrageServiceChild = new Monitor(
-  path.resolve(__dirname + "/scripts/runArbitrageService.js"),
-  {
-    max: 3,
-  }
+  path.resolve(__dirname + "/scripts/runArbitrageService.js")
 );
 
 bot.onText(/\/start/, async (msg) => {

@@ -1,7 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as s3 from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
 
@@ -18,6 +17,9 @@ export class CryptoArbitrageStack extends cdk.Stack {
           "AmazonSSMManagedInstanceCore"
         ),
         iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"),
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "CloudWatchAgentServerPolicy"
+        ),
       ],
       inlinePolicies: {
         parameterStore: new iam.PolicyDocument({
@@ -31,16 +33,12 @@ export class CryptoArbitrageStack extends cdk.Stack {
               resources: [
                 "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
                 "arn:aws:ssm:eu-central-1:654654636079:parameter/github/deploy-key",
+                "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/cloudwatch-config",
               ],
             }),
           ],
         }),
       },
-    });
-
-    const keyPair = ec2.KeyPair.fromKeyPairAttributes(this, "KeyPair", {
-      keyPairName: "crypto-arbitrage",
-      type: ec2.KeyPairType.RSA,
     });
 
     const securityGroup = new ec2.SecurityGroup(this, "arbitrage-bot-sg", {
@@ -50,7 +48,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
     securityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(22),
-      "SSH frm anywhere"
+      "SSH from anywhere"
     );
 
     const instance = new ec2.Instance(this, "arbitrage-bot", {
@@ -61,7 +59,6 @@ export class CryptoArbitrageStack extends cdk.Stack {
       ),
       role: instanceRole,
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
-      keyPair,
       securityGroup,
     });
 

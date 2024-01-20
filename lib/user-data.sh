@@ -8,6 +8,10 @@ sudo yum install -y nodejs20 git
 sudo ln -s /usr/bin/node-20 /usr/bin/node
 sudo ln -s /usr/bin/npm-20 /usr/bin/npm
 
+# Install and run Cloudwatch agent
+sudo yum install -y amazon-cloudwatch-agent
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:/crypto-arbitrage/cloudwatch-config
+
 # Get the repo
 aws ssm get-parameter --with-decryption --name /github/deploy-key --output text --query Parameter.Value > ~/.ssh/id_ed25519
 chmod 400 ~/.ssh/id_ed25519

@@ -18,10 +18,8 @@
     "outDir": "build",
     "sourceMap": true,
     /* If your code doesn't run in the DOM: */
-    "lib": ["es2022"]
+    "lib": ["es2022"],
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*"],
-  "exclude": [
-    "src/**/*.spec.ts"
-  ]
 }

@@ -8,6 +8,7 @@ import {
 } from "../../types.js";
 import { Exchange, Network, OrderBook } from "../../exchanges/types.js";
 import { logger } from "../../logger/logger.js";
+import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 
 type ExchangePair = [Exchange, Exchange];
 
@@ -221,23 +222,27 @@ export class MultiExchangeCalculator {
     const firstTradePrice = withdrawExchangeOrderBook.bestAsk.quote;
     const firstTradeStartAmount = firstTradeEndAmount * firstTradePrice;
 
+    const feeCalculator = new FeeCalculator();
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
-      await this.calculateFees({
+      await feeCalculator.calculateFees({
         withdrawExchange: withdrawExchange,
         depositExchange: depositExchange,
         currencyCode: baseCurrencyCode,
         networkName,
         symbol,
       });
-    const withdrawAmount = this.deductFee(
+    const withdrawAmount = feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
     );
-    const lastTradeStartAmount = this.deductFee(withdrawAmount, withdrawFee);
+    const lastTradeStartAmount = feeCalculator.deductFee(
+      withdrawAmount,
+      withdrawFee
+    );
     const lastTradePrice = depositExchangeOrderBook.bestBid.quote;
     const lastTradeEndAmount =
       depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount;
-    const finalAmount = this.deductFee(
+    const finalAmount = feeCalculator.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
     );
@@ -317,22 +322,26 @@ export class MultiExchangeCalculator {
     const firstTradeEndAmount =
       firstTradeStartAmount * withdrawExchangeOrderBook.bestBid.quote;
 
+    const feeCalculator = new FeeCalculator();
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
-      await this.calculateFees({
+      await feeCalculator.calculateFees({
         withdrawExchange,
         depositExchange,
         networkName,
         symbol,
         currencyCode: quoteCurrencyCode,
       });
-    const withdrawAmount = this.deductFee(
+    const withdrawAmount = feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
     );
-    const lastTradeStartAmount = this.deductFee(withdrawAmount, withdrawFee);
+    const lastTradeStartAmount = feeCalculator.deductFee(
+      withdrawAmount,
+      withdrawFee
+    );
     const lastTradePrice = depositExchangeOrderBook.bestAsk.quote;
     const lastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
-    const finalAmount = this.deductFee(
+    const finalAmount = feeCalculator.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
     );
@@ -394,13 +403,6 @@ export class MultiExchangeCalculator {
     return null;
   }
 
-  private deductFee(amount: number, fee: Fee): number {
-    if (fee.type === FeeType.PERCENT) {
-      return amount - amount * fee.value;
-    }
-    return amount - fee.value;
-  }
-
   private isArbitrageFeasible(startAmount: number, endAmount: number) {
     return (
       this.getProfitOrLossPercent(startAmount, endAmount) >=
@@ -410,32 +412,6 @@ export class MultiExchangeCalculator {
 
   private getProfitOrLossPercent(startAmount: number, endAmount: number) {
     return ((endAmount - startAmount) * 100) / startAmount;
-  }
-
-  private async calculateFees({
-    withdrawExchange,
-    depositExchange,
-    symbol,
-    networkName,
-    currencyCode,
-  }: {
-    withdrawExchange: Exchange;
-    depositExchange: Exchange;
-    symbol: string;
-    networkName: string;
-    currencyCode: string;
-  }) {
-    const emptyFee = { type: FeeType.FIXED, value: 0 };
-    let [withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee] =
-      await Promise.all([
-        withdrawExchange.getTradingFee(symbol),
-        depositExchange.getTradingFee(symbol),
-        withdrawExchange.getWithdrawFee(currencyCode, networkName),
-      ]);
-    withdrawExchangeTradeFee ??= emptyFee;
-    depositExchangeTradeFee ??= emptyFee;
-    withdrawFee ??= emptyFee;
-    return { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee };
   }
 
   private async getCommonActiveNetworkNames(

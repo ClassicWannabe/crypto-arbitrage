@@ -45,49 +45,16 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrage(
 );
 
 const main = async () => {
-  await updateSymbols();
-  await findPairs();
+  await process();
 };
 
-const updateSymbols = async () => {
-  try {
-    const markets = await Promise.all(
-      exchanges.map((exchange) => exchange.getMarkets())
-    );
-  
-    const symbols = new Set<string>();
-    for (const market of markets) {
-      const marketSymbols = Object.keys(market);
-  
-      for (const marketSymbol of marketSymbols) {
-        symbols.add(marketSymbol);
-      }
-    }
-  
-    const shuffledSymbols = shuffle([...symbols]);
-  
-    await storage.saveSymbols(shuffledSymbols);
-  }catch (e) {
-    const error = e as Error;
-    console.log(error);
-
-    if (error.stack) {
-      await bot.sendMessage(telegramDeveloperId, error.stack);
-    }
-    await bot.sendMessage(
-      telegramGroupId,
-      "Could not update symbols"
-    );
-  }
-
-};
-
-const findPairs = async () => {
+const process = async () => {
   const fiveMinInSeconds = 5 * 60;
   let iteration = 1;
   while (true) {
     try {
       logger.info(`Start arbitrage service. Iteration: ${iteration}`);
+      await updateSymbols();
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");
 
@@ -109,4 +76,33 @@ const findPairs = async () => {
   }
 };
 
-main();
+const updateSymbols = async () => {
+  try {
+    const markets = await Promise.all(
+      exchanges.map((exchange) => exchange.getMarkets())
+    );
+
+    const symbols = new Set<string>();
+    for (const market of markets) {
+      const marketSymbols = Object.keys(market);
+
+      for (const marketSymbol of marketSymbols) {
+        symbols.add(marketSymbol);
+      }
+    }
+
+    const shuffledSymbols = shuffle([...symbols]);
+
+    await storage.saveSymbols(shuffledSymbols);
+  } catch (e) {
+    const error = e as Error;
+    console.log(error);
+
+    if (error.stack) {
+      await bot.sendMessage(telegramDeveloperId, error.stack);
+    }
+    await bot.sendMessage(telegramGroupId, "Could not update symbols");
+  }
+};
+
+await main();
