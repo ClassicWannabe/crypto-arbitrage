@@ -1,3 +1,10 @@
+import { OrderBook } from "./exchanges/types.js";
+
+export enum ScriptStatus {
+  RUNNING = "running",
+  STOPPED = "stopped",
+}
+
 export enum TrasnferOperation {
   DEPOSIT = "deposit",
   WITHDRAW = "withdraw",
@@ -46,7 +53,8 @@ export type TradeStep = {
   operation: TradeOperation;
   startCoin: CurrencyAmount;
   endCoin: CurrencyAmount;
-  price: number
+  orderBook: OrderBook;
+  price: number;
   exchangeId: string;
 };
 

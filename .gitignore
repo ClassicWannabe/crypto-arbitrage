@@ -7,3 +7,5 @@ temp
 .cdk.staging
 cdk.out
 server.log
+yarn-error.log
+.yarn

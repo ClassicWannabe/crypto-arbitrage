@@ -12,12 +12,14 @@ import {
 import { logger } from "./logger/logger.js";
 import { FileStorage } from "./storages/File/File.js";
 import { ObjectFormatter } from "./formatters/ObjectFormatter/ObjectFormatter.js";
+import { ScriptStatus } from "./types.js";
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
+const telegramDeveloperId = +getEnv("telegramDeveloperId");
 const bot = new TelegramBot(telegramBotToken, {
   polling: true,
 });
@@ -29,6 +31,7 @@ const runArbitrageServiceChild = new Monitor(
 );
 
 runArbitrageServiceChild.start();
+let scriptStatus: ScriptStatus = ScriptStatus.RUNNING;
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -38,9 +41,30 @@ bot.onText(/\/start/, async (msg) => {
     return;
   }
 
-  runArbitrageServiceChild.start();
+  if (scriptStatus === ScriptStatus.RUNNING) {
+    await bot.sendMessage(chatId, "Already running...");
+  } else {
+    runArbitrageServiceChild.start();
+    scriptStatus = ScriptStatus.RUNNING;
+    await bot.sendMessage(chatId, "Activated arbitrage calculation...");
+  }
+});
 
-  await bot.sendMessage(chatId, "Activated arbitrage calculation...");
+bot.onText(/\/start force/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+
+  runArbitrageServiceChild.start();
+  scriptStatus = ScriptStatus.RUNNING;
+
+  await bot.sendMessage(
+    chatId,
+    "Forcefully activated arbitrage calculation..."
+  );
 });
 
 bot.onText(/\/stop/, async (msg) => {
@@ -51,9 +75,13 @@ bot.onText(/\/stop/, async (msg) => {
     return;
   }
 
-  runArbitrageServiceChild.stop();
-
-  await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
+  if (scriptStatus === ScriptStatus.RUNNING) {
+    runArbitrageServiceChild.stop();
+    scriptStatus = ScriptStatus.STOPPED;
+    await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
+  } else {
+    await bot.sendMessage(chatId, "Already stopped...");
+  }
 });
 
 bot.onText(/\/setProfit ([0-9]+)/, async (msg, match) => {
@@ -88,7 +116,7 @@ bot.onText(/\/config/, async (msg) => {
 
   const arbitrageConfig = await storage.getArbitrageConfig();
 
-  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig).text);
 });
 
 bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
@@ -118,7 +146,7 @@ bot.onText(/\/setRateLimit ([a-zA-Z]+) ([0-9]+)/, async (msg, match) => {
 
   const arbitrageConfig = await storage.getArbitrageConfig();
 
-  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig).text);
 });
 
 bot.onText(
@@ -152,7 +180,7 @@ bot.onText(
 
     const arbitrageConfig = await storage.getArbitrageConfig();
 
-    await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+    await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig).text);
   }
 );
 
@@ -178,7 +206,7 @@ bot.onText(/\/addIgnoredSymbol (.+)/, async (msg, match) => {
 
   const arbitrageConfig = await storage.getArbitrageConfig();
 
-  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig).text);
 });
 
 bot.onText(/\/removeIgnoredSymbol (.+)/, async (msg, match) => {
@@ -203,7 +231,7 @@ bot.onText(/\/removeIgnoredSymbol (.+)/, async (msg, match) => {
 
   const arbitrageConfig = await storage.getArbitrageConfig();
 
-  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig));
+  await bot.sendMessage(chatId, objectFormatter.format(arbitrageConfig).text);
 });
 
 bot.onText(/\/defaultRateLimits/, async (msg) => {
@@ -216,7 +244,7 @@ bot.onText(/\/defaultRateLimits/, async (msg) => {
 
   const defaultRateLimits = getExchangeDefaultRateLimits();
 
-  await bot.sendMessage(chatId, objectFormatter.format(defaultRateLimits));
+  await bot.sendMessage(chatId, objectFormatter.format(defaultRateLimits).text);
 });
 
 const handleUnwantedRequest = async (msg: TelegramBot.Message) => {
@@ -232,7 +260,6 @@ const handleFailedRequest = async (chatId: number) => {
 
 await bot.sendMessage(telegramGroupId, "I am revived!");
 
-process.on("uncaughtException", (err) => {
-  logger.error(err.stack);
-  logger.error("Node NOT Exiting...");
+runArbitrageServiceChild.on("exit", () => {
+  scriptStatus = ScriptStatus.STOPPED;
 });

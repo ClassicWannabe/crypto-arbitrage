@@ -73,6 +73,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: baseCurrencyCode,
         },
         price: firstTradePrice,
+        orderBook: withdrawExchangeOrderBook,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -97,6 +98,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: quoteCurrencyCode,
         },
         price: lastTradePrice,
+        orderBook: depositExchangeOrderBook,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {
@@ -173,6 +175,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: quoteCurrencyCode,
         },
         price: firstTradePrice,
+        orderBook: withdrawExchangeOrderBook,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -197,6 +200,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: baseCurrencyCode,
         },
         price: lastTradePrice,
+        orderBook: depositExchangeOrderBook,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {

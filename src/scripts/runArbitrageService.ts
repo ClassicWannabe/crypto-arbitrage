@@ -58,7 +58,6 @@ const process = async () => {
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");
 
-      await bot.sendMessage(telegramGroupId, `Finish iteration ${iteration}`);
       iteration++;
     } catch (e) {
       const error = e as Error;

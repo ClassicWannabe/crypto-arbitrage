@@ -8,7 +8,14 @@ export class Telegram implements Publisher {
     private readonly chatId: string | number
   ) {}
 
-  async publish(message: string): Promise<void> {
+  async publish(message: string, image?: Buffer): Promise<void> {
+    if (image) {
+      await this.bot.sendPhoto(this.chatId, image, {
+        caption: message,
+        parse_mode: "HTML",
+      });
+      return;
+    }
     await this.bot.sendMessage(this.chatId, message, { parse_mode: "HTML" });
   }
 }

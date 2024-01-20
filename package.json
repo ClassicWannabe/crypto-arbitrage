@@ -28,6 +28,7 @@
     "forever-monitor": "^3.0.3",
     "graphql": "^16.8.1",
     "lodash-es": "^4.17.21",
+    "node-html-to-image": "^4.0.0",
     "node-telegram-bot-api": "^0.64.0",
     "rimraf": "^5.0.5",
     "source-map-support": "^0.5.21",
@@ -49,6 +50,7 @@
   "engines": {
     "npm": "please-use-yarn",
     "node": ">=20.0.0 <21.0.0",
-    "yarn": ">=1.22.0 < 3.0.0"
-  }
+    "yarn": ">=3.0.0"
+  },
+  "packageManager": "yarn@3.7.0"
 }

@@ -77,8 +77,11 @@ export class MultiExchangeArbitrage implements Service {
   private async publishData(arbitrages: ArbitrageData[]) {
     await Promise.all(
       arbitrages.map(async (arbitrageData) => {
-        const formattedMessage = this.formatter.format(arbitrageData);
-        await this.publisher.publish(formattedMessage);
+        const formattedMessage = await this.formatter.format(arbitrageData);
+        await this.publisher.publish(
+          formattedMessage.text,
+          formattedMessage.image
+        );
       })
     );
   }

@@ -3,7 +3,7 @@ import YAML from "yaml";
 import { Formatter } from "../types.js";
 
 export class ObjectFormatter implements Formatter {
-  format(object: Record<string, unknown>): string {
-    return YAML.stringify(object);
+  format(object: Record<string, unknown>) {
+    return { text: YAML.stringify(object) };
   }
 }

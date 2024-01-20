@@ -1,3 +1,7 @@
+import htmlToImage from "node-html-to-image";
+import fs from "fs";
+import { reverse } from "lodash-es";
+
 import {
   ArbitrageData,
   ArbitrageSteps,
@@ -11,16 +15,20 @@ import {
   WithdrawStep,
 } from "../../types.js";
 import { Formatter } from "../types.js";
+import { customDeepmerge } from "../../storages/helpers.js";
+import { tableHbsPath } from "./consts.js";
 
 export class ArbitrageFormatter implements Formatter {
-  format({ symbol, steps }: ArbitrageData): string {
+  async format({ symbol, steps }: ArbitrageData) {
     let message = this.formatSymbol(symbol);
     message += this.formatExchanges(steps);
+    const tradeSteps = [];
 
     for (const step of steps) {
       switch (step.event) {
         case ExchangeEvent.TRADE: {
           message += this.formatTradeStep(step, symbol);
+          tradeSteps.push(step);
           break;
         }
         case ExchangeEvent.PAY_FEE: {
@@ -38,7 +46,9 @@ export class ArbitrageFormatter implements Formatter {
       }
     }
 
-    return message;
+    const image = await this.generateImage(tradeSteps);
+
+    return { text: message, image };
   }
 
   private formatSymbol(symbol: string) {
@@ -107,5 +117,32 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatNumber(num: number, maximumFractionDigits: number = 18) {
     return num.toLocaleString(undefined, { maximumFractionDigits });
+  }
+
+  private async generateImage(steps: TradeStep[]) {
+    const normalizedSteps = this.normalizeImageSteps(steps);
+    const html = fs.readFileSync(tableHbsPath, {
+      encoding: "utf-8",
+    });
+    const image = (await htmlToImage({
+      html,
+      content: { steps: normalizedSteps },
+    })) as Buffer;
+
+    return image;
+  }
+
+  private normalizeImageSteps(steps: TradeStep[]): TradeStep[] {
+    const normalizedSteps = [];
+    for (const step of steps) {
+      const normalizedStep = customDeepmerge(step, {
+        orderBook: {
+          asks: reverse(step.orderBook.asks.slice(0, 5)),
+          bids: step.orderBook.bids.slice(0, 5),
+        },
+      });
+      normalizedSteps.push(normalizedStep);
+    }
+    return normalizedSteps;
   }
 }
