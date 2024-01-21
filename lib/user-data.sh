@@ -24,6 +24,5 @@ aws ssm get-parameter --with-decryption --name /crypto-arbitrage/env --output te
 cd ~/arbitrage-app
 npm install -g corepack
 corepack enable
-yarn set version 3.x
-yarn install
-yarn start:prod
+corepack use yarn@3.x
+corepack yarn start:prod
