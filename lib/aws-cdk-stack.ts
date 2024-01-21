@@ -11,11 +11,6 @@ export class CryptoArbitrageStack extends cdk.Stack {
 
     const defaultvpc = ec2.Vpc.fromLookup(this, "vpc", { isDefault: true });
 
-    const logGroup = new logs.LogGroup(this, "crypto-arbitrage", {
-      logGroupName: "crypto-arbitrage.log",
-      retention: logs.RetentionDays.ONE_MONTH,
-    });
-
     const instanceRole = new iam.Role(this, "arbitrage-bot-role", {
       assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
       managedPolicies: [
