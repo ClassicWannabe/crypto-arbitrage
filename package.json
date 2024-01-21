@@ -9,10 +9,10 @@
   },
   "scripts": {
     "start:dev": "tsx watch src/index.ts",
-    "start:prod": "yarn build && forever build/index.js",
+    "start:prod": "npm run build && forever build/index.js",
     "build": "rimraf ./build && tsc",
     "test": "vitest",
-    "script:arbitrage:prod": "yarn build && node build/scripts/runArbitrageService.js",
+    "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageService.js",
     "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageService.ts",
     "deploy": "npx cdk deploy",
     "destroy": "npx cdk destroy"
@@ -48,9 +48,8 @@
     "vitest": "^1.2.0"
   },
   "engines": {
-    "npm": "please-use-yarn",
+    "npm": ">=10",
     "node": ">=20.0.0 <21.0.0",
-    "yarn": ">=3.0.0"
-  },
-  "packageManager": "yarn@3.7.0+sha256.7bf0c78a106332886ea4e59641fd819b1af953edcd72c4d93a32b1c71000ee67"
+    "yarn": "please use npm"
+  }
 }
