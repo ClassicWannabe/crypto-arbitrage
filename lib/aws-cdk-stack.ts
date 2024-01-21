@@ -51,6 +51,11 @@ export class CryptoArbitrageStack extends cdk.Stack {
       "SSH from anywhere"
     );
 
+    const keyPair = ec2.KeyPair.fromKeyPairAttributes(this, "KeyPair", {
+      keyPairName: "crypto-arbitrage",
+      type: ec2.KeyPairType.RSA,
+    });
+
     const instance = new ec2.Instance(this, "arbitrage-bot", {
       vpc: defaultvpc,
       instanceType: ec2.InstanceType.of(
@@ -60,6 +65,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
       role: instanceRole,
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       securityGroup,
+      keyPair
     });
 
     new cdk.CfnOutput(this, "InstancePublicIp", {
