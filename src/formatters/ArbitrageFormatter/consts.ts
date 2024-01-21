@@ -4,8 +4,6 @@ import path from "path";
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const templatesPath = path.resolve(
-  __dirname + "../../../../templates/table.hbs"
-);
+export const templatesPath = path.resolve(__dirname + "../../../../templates/");
 
 export const tableHbsPath = path.resolve(templatesPath + "/table.hbs");
