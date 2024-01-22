@@ -44,15 +44,15 @@ export class MultiExchangeArbitrage implements Service {
     for (const symbolsChunk of chunk(symbols, this.symbolsChunkSize)) {
       const arbitrages = await this.calculateData(symbolsChunk);
 
+      if (arbitrages.length > 0) {
+        logger.info("Found potential arbitrage offers", { arbitrages });
+      }
+
       this.publishData(arbitrages);
-      logger.info("Successfully processed symbols chunk", {
-        symbolsChunk,
-        iteration,
-        processedNumber: iteration * this.symbolsChunkSize,
-      });
       this.symbolPointer = iteration * this.symbolsChunkSize;
       iteration++;
     }
+    logger.info("Successfully processed symbols", { symbols });
     this.symbolPointer = 0;
   }
 
@@ -86,15 +86,16 @@ export class MultiExchangeArbitrage implements Service {
     );
   }
 
-  private async reloadExchanges(force = false) {
-    if (!this.isAnyExchangeShouldBeReloaded() && !force) {
+  private async reloadExchanges() {
+    if (!this.isAnyExchangeShouldBeReloaded()) {
       return;
     }
     await this.calculator.reloadAllExchanges();
     this.exchangesLastReloadDate = new Date();
+
+    logger.info("Sleep 1 minute after reloading markets...");
     const sixtySeconds = 60;
     await sleep(sixtySeconds);
-    logger.info("Sleep 1 minute after reloading markets...");
   }
 
   private isAnyExchangeShouldBeReloaded(): boolean {
