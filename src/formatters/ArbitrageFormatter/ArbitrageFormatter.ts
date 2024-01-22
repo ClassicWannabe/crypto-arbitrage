@@ -128,8 +128,18 @@ export class ArbitrageFormatter implements Formatter {
       html,
       content: { steps: normalizedSteps },
       puppeteerArgs: {
-        args: ["--no-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--headless",
+          "--no-zygote",
+          "--disable-gpu",
+        ],
         headless: true,
+        ignoreHTTPSErrors: true,
       },
     })) as Buffer;
 
