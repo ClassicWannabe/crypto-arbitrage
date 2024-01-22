@@ -14,7 +14,7 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-c
 
 # Install Chrome (node-html-to-image dependency)
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
-sudo yum install ./google-chrome-stable_current_x86_64.rpm
+sudo yum install -y ./google-chrome-stable_current_x86_64.rpm
 sudo rm --force google-chrome-stable_current_x86_64.rpm
 sudo ln -s /usr/bin/google-chrome-stable /usr/bin/chromium
 
