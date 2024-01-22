@@ -12,6 +12,12 @@ sudo ln -s /usr/bin/npm-20 /usr/bin/npm
 sudo yum install -y amazon-cloudwatch-agent
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:/crypto-arbitrage/cloudwatch-config
 
+# Install Chrome (node-html-to-image dependency)
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+sudo yum install ./google-chrome-stable_current_x86_64.rpm
+sudo rm --force google-chrome-stable_current_x86_64.rpm
+sudo ln -s /usr/bin/google-chrome-stable /usr/bin/chromium
+
 # Get the repo
 aws ssm get-parameter --with-decryption --name /github/deploy-key --output text --query Parameter.Value > ~/.ssh/id_ed25519
 chmod 400 ~/.ssh/id_ed25519

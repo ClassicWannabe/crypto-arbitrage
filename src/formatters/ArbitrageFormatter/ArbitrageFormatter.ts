@@ -127,6 +127,10 @@ export class ArbitrageFormatter implements Formatter {
     const image = (await htmlToImage({
       html,
       content: { steps: normalizedSteps },
+      puppeteerArgs: {
+        args: ["--no-sandbox"],
+        headless: true,
+      },
     })) as Buffer;
 
     return image;
