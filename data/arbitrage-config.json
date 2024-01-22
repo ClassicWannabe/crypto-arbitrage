@@ -1,5 +1,5 @@
 {
-  "minProfitPercent": 0.5,
+  "minProfitPercent": 1.5,
   "parallelProcessSymbolNumber": 5,
   "rateLimits": {
     "okx": 200,
