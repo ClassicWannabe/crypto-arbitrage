@@ -19,7 +19,6 @@ const __dirname = path.dirname(__filename);
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
-const telegramDeveloperId = +getEnv("telegramDeveloperId");
 const bot = new TelegramBot(telegramBotToken, {
   polling: true,
 });

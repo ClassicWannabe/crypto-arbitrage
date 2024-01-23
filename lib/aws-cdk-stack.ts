@@ -53,6 +53,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
 
     const instance = new ec2.Instance(this, "arbitrage-bot", {
       vpc: defaultvpc,
+      availabilityZone: "eu-central-1a",
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T2,
         ec2.InstanceSize.MICRO
