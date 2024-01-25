@@ -38,3 +38,8 @@ export const orderBookSchema = z.object({
   bids: z.array(quotationSchema),
   symbol: z.string(),
 });
+
+export const tickerSchema = z.object({
+  symbol: z.string(),
+  percentage: z.number().nullish(),
+});

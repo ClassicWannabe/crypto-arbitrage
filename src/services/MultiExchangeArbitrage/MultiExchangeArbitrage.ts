@@ -75,15 +75,14 @@ export class MultiExchangeArbitrage implements Service {
   }
 
   private async publishData(arbitrages: ArbitrageData[]) {
-    await Promise.all(
-      arbitrages.map(async (arbitrageData) => {
-        const formattedMessage = await this.formatter.format(arbitrageData);
-        await this.publisher.publish(
-          formattedMessage.text,
-          formattedMessage.image
-        );
-      })
-    );
+    // Removed `Promise.all` to decrease load on the server
+    for (const arbitrageData of arbitrages) {
+      const formattedMessage = await this.formatter.format(arbitrageData);
+      await this.publisher.publish(
+        formattedMessage.text,
+        formattedMessage.image
+      );
+    }
   }
 
   private async reloadExchanges() {

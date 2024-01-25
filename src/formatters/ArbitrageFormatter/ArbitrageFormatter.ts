@@ -66,19 +66,61 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatTradeStep(step: TradeStep, symbol: string) {
-    const { startCoin, endCoin, exchangeId, operation, price } = step;
-    const operationWord = this.formatOperation(operation);
-    const exchangeString = `Платформа: ${this.makeBold(
-      exchangeId.toUpperCase()
-    )}`;
-    const priceString = `Цена: ${this.makeBold(this.formatNumber(price))}`;
-    const operationString = `Операция: ${operationWord} ${symbol}. Обмен ${this.formatCoin(
-      startCoin
-    )} на ${this.formatCoin(endCoin)}`;
-    return `${exchangeString}. ${priceString}.\n${operationString}\n\n`;
+    const {
+      startCoin,
+      endCoin,
+      exchangeId,
+      operation,
+      price,
+      dayChangePercentage,
+    } = step;
+    const exchangeString = this.formatExchange(exchangeId);
+    const priceString = this.formatPrice(price);
+    const operationString = this.formatOperation({
+      startCoin,
+      endCoin,
+      symbol,
+      operation,
+    });
+    const dayChangePercentageString =
+      this.formatDayChangePercentage(dayChangePercentage);
+    return `${exchangeString}.\n${priceString}.\n${dayChangePercentageString}\n${operationString}\n\n`;
   }
 
-  private formatOperation(operation: TradeOperation) {
+  private formatExchange(exchange: string) {
+    return `Платформа: ${this.makeBold(exchange.toUpperCase())}`;
+  }
+
+  private formatPrice(price: number) {
+    return `Цена: ${this.makeBold(this.formatNumber(price))}`;
+  }
+
+  private formatDayChangePercentage(percentage: number | null | undefined) {
+    if (!percentage) {
+      return "";
+    }
+    const str = `Изменение за сутки: ${percentage}`;
+    if (percentage > 0) {
+      return str + `📈`;
+    }
+    return str + `📉`;
+  }
+
+  private formatOperation({
+    operation,
+    startCoin,
+    endCoin,
+    symbol,
+  }: Pick<TradeStep, "operation" | "startCoin" | "endCoin"> & {
+    symbol: string;
+  }) {
+    const operationTypeString = this.formatOperationType(operation);
+    return `Операция: ${operationTypeString} ${symbol}. Обмен ${this.formatCoin(
+      startCoin
+    )} на ${this.formatCoin(endCoin)}`;
+  }
+
+  private formatOperationType(operation: TradeOperation) {
     return operation === TradeOperation.BUY ? "Покупка" : "Продажа";
   }
 

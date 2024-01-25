@@ -28,6 +28,8 @@ describe(ArbitrageStepsCalculator.name, () => {
         bestAsk: { base: 10, quote: 10 },
         bestBid: { base: 10, quote: 10 },
       },
+      withdrawExchangeTicker: { symbol: "symbol", percentage: 0 },
+      depositExchangeTicker: { symbol: "symbol", percentage: 0 },
       minProfitPercent: 0,
       market: {
         active: true,

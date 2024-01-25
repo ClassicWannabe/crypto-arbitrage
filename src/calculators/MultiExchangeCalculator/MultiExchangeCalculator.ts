@@ -59,14 +59,15 @@ export class MultiExchangeCalculator {
       symbol
     );
 
-    this.resetOrderBookCaches();
+    this.resetExchangeCaches();
 
     return arbitrages;
   }
 
-  private resetOrderBookCaches() {
+  private resetExchangeCaches() {
     for (const exchange of this.exchanges) {
       exchange.resetOrderBookCache();
+      exchange.resetTickerCache();
     }
   }
 
@@ -91,6 +92,8 @@ export class MultiExchangeCalculator {
         depositExchangeOrderBook,
         baseCurrencyCommonNetworks,
         quoteCurrencyCommonNetworks,
+        withdrawExchangeTicker,
+        depositExchangeTicker,
       } = initialData;
 
       const feeCalculator = new FeeCalculator();
@@ -103,6 +106,8 @@ export class MultiExchangeCalculator {
           depositExchangeOrderBook,
           market: withdrawExchangeMarketData,
           minProfitPercent: this.minProfitPercent,
+          withdrawExchangeTicker,
+          depositExchangeTicker,
         }
       );
 
@@ -202,11 +207,17 @@ export class MultiExchangeCalculator {
       return null;
     }
 
-    const [withdrawExchangeOrderBook, depositExchangeOrderBook] =
-      await Promise.all([
-        withdrawExchange.getOrderBook(symbol, 1),
-        depositExchange.getOrderBook(symbol, 1),
-      ]);
+    const [
+      withdrawExchangeOrderBook,
+      depositExchangeOrderBook,
+      withdrawExchangeTicker,
+      depositExchangeTicker,
+    ] = await Promise.all([
+      withdrawExchange.getOrderBook(symbol, 1),
+      depositExchange.getOrderBook(symbol, 1),
+      withdrawExchange.getTicker(symbol),
+      depositExchange.getTicker(symbol),
+    ]);
 
     if (!withdrawExchangeOrderBook || !depositExchangeOrderBook) {
       logger.debug(
@@ -220,6 +231,8 @@ export class MultiExchangeCalculator {
       depositExchangeMarketData,
       withdrawExchangeOrderBook,
       depositExchangeOrderBook,
+      withdrawExchangeTicker,
+      depositExchangeTicker,
       baseCurrencyCommonNetworks,
       quoteCurrencyCommonNetworks,
     };

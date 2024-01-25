@@ -9,6 +9,7 @@ import {
   networksSchema,
   orderBookSchema,
   quotationSchema,
+  tickerSchema,
 } from "./schema.js";
 import { Fee } from "../types.js";
 
@@ -24,6 +25,8 @@ export interface Exchange {
   resetOrderBookCache(): void;
   getTradingFee(symbol: string): Promise<Fee | null>;
   getWithdrawFee(code: string, networkName?: string): Promise<Fee | null>;
+  getTicker(symbol: string): Promise<Ticker>;
+  resetTickerCache(): void;
 }
 
 export type Market = z.infer<typeof marketSchema>;
@@ -37,6 +40,7 @@ export type OrderBook = z.infer<typeof orderBookSchema> & {
   bestBid: Quotation;
   bestAsk: Quotation;
 };
+export type Ticker = z.infer<typeof tickerSchema>;
 
 export enum ExchangeType {
   BINANCE = "binance",

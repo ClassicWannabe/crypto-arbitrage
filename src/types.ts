@@ -1,4 +1,4 @@
-import { OrderBook } from "./exchanges/types.js";
+import { OrderBook, Ticker } from "./exchanges/types.js";
 
 export enum ScriptStatus {
   RUNNING = "running",
@@ -56,6 +56,7 @@ export type TradeStep = {
   orderBook: OrderBook;
   price: number;
   exchangeId: string;
+  dayChangePercentage?: number | null;
 };
 
 export type FeeStep = Pick<Fee, "type" | "value"> & {

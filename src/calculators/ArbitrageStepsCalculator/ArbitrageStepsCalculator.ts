@@ -1,10 +1,12 @@
-import { Exchange, Market, OrderBook } from "../../exchanges/types.js";
+import { Exchange, Market, OrderBook, Ticker } from "../../exchanges/types.js";
 import { ArbitrageSteps, ExchangeEvent, TradeOperation } from "../../types.js";
 import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 
 export type CalculateArbitrageStepsParams = {
   withdrawExchangeOrderBook: OrderBook;
   depositExchangeOrderBook: OrderBook;
+  withdrawExchangeTicker: Ticker;
+  depositExchangeTicker: Ticker;
   withdrawExchange: Exchange;
   depositExchange: Exchange;
   market: Market;
@@ -25,6 +27,8 @@ export class ArbitrageStepsCalculator {
       depositExchange,
       withdrawExchangeOrderBook,
       depositExchangeOrderBook,
+      withdrawExchangeTicker,
+      depositExchangeTicker,
       market,
     } = this.params;
     const { symbol, base: baseCurrencyCode, quote: quoteCurrencyCode } = market;
@@ -74,6 +78,7 @@ export class ArbitrageStepsCalculator {
         },
         price: firstTradePrice,
         orderBook: withdrawExchangeOrderBook,
+        dayChangePercentage: withdrawExchangeTicker.percentage,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -99,6 +104,7 @@ export class ArbitrageStepsCalculator {
         },
         price: lastTradePrice,
         orderBook: depositExchangeOrderBook,
+        dayChangePercentage: depositExchangeTicker.percentage,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {
@@ -126,6 +132,8 @@ export class ArbitrageStepsCalculator {
       depositExchange,
       withdrawExchangeOrderBook,
       depositExchangeOrderBook,
+      withdrawExchangeTicker,
+      depositExchangeTicker,
       market,
     } = this.params;
     const { symbol, base: baseCurrencyCode, quote: quoteCurrencyCode } = market;
@@ -176,6 +184,7 @@ export class ArbitrageStepsCalculator {
         },
         price: firstTradePrice,
         orderBook: withdrawExchangeOrderBook,
+        dayChangePercentage: withdrawExchangeTicker.percentage,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
@@ -201,6 +210,7 @@ export class ArbitrageStepsCalculator {
         },
         price: lastTradePrice,
         orderBook: depositExchangeOrderBook,
+        dayChangePercentage: depositExchangeTicker.percentage,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {

@@ -1,13 +1,14 @@
 import { Exchange as CcxtExchange } from "ccxt";
 import { isNil } from "lodash-es";
 
-import { Exchange, Networks, OrderBook } from "../types.js";
+import { Exchange, Networks, OrderBook, Ticker } from "../types.js";
 import {
   currenciesSchema,
   currencySchema,
   marketSchema,
   marketsSchema,
   orderBookSchema,
+  tickerSchema,
 } from "../schema.js";
 import { FeeType } from "../../types.js";
 import { logger } from "../../logger/logger.js";
@@ -15,6 +16,7 @@ import { logger } from "../../logger/logger.js";
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
   private orderBooks: Record<string, OrderBook> = {};
+  private tickers: Record<string, Ticker> = {};
   readonly id: string;
 
   constructor(exchange: CcxtExchange) {
@@ -172,5 +174,21 @@ export abstract class AbstractExchange implements Exchange {
     }
 
     return { value: fee, type: FeeType.FIXED };
+  }
+
+  async getTicker(symbol: string) {
+    const cachedTicker = this.tickers[symbol];
+
+    if (cachedTicker) {
+      return cachedTicker;
+    }
+
+    const ticker = await this.exchange.fetchTicker(symbol);
+
+    return tickerSchema.parse(ticker);
+  }
+
+  resetTickerCache(): void {
+    this.tickers = {};
   }
 }
