@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DB_URL")
+}
+
+model ArbitrageData {
+  id            String          @id @default(uuid())
+  symbol        String
+  status        StepStatus      @default(UNTOUCHED)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  ArbitrageStep ArbitrageStep[]
+}
+
+model ArbitrageStep {
+  id              String        @id @default(uuid())
+  ArbitrageData   ArbitrageData @relation(fields: [arbitrageDataId], references: [id])
+  arbitrageDataId String
+  order           Int           @db.UnsignedTinyInt
+  type            StepType
+  status          StepStatus    @default(UNTOUCHED)
+  details         Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+enum StepStatus {
+  PROCESSED
+  PROCESSING
+  UNTOUCHED
+  FAILED
+  CANCELLED
+}
+
+enum StepType {
+  TRADE
+  FEE
+  WITHDRAW
+  STATUS
+}
