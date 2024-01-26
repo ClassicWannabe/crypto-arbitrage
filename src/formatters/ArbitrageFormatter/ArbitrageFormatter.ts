@@ -99,7 +99,7 @@ export class ArbitrageFormatter implements Formatter {
     if (!percentage) {
       return "";
     }
-    const str = `Изменение за сутки: ${percentage}`;
+    const str = `Изменение за 24ч: ${this.formatNumber(percentage, 3)}% `;
     if (percentage > 0) {
       return str + `📈`;
     }
