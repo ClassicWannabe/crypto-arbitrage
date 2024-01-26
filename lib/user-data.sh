@@ -29,4 +29,5 @@ aws ssm get-parameter --with-decryption --name /crypto-arbitrage/env --output te
 # Start the app
 cd ~/arbitrage-app
 npm install
+screen
 npm run start:prod

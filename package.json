@@ -15,8 +15,8 @@
     "test": "vitest",
     "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageService.js",
     "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageService.ts",
-    "deploy": "npx cdk deploy",
-    "destroy": "npx cdk destroy"
+    "deploy": "npx cdk deploy -f",
+    "destroy": "npx cdk destroy --require-approval never"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.121.1",
@@ -50,7 +50,7 @@
   },
   "engines": {
     "npm": ">=10",
-    "node": ">=20.0.0 <21.0.0",
+    "node": "20.x",
     "yarn": "please use npm"
   }
 }
