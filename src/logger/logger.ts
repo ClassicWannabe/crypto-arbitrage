@@ -16,6 +16,9 @@ if (env === NODE_ENV.DEV) {
 
 export const logger = winston.createLogger({
   level: logLevel,
-  format: winston.format.json(),
+  format: winston.format.combine(
+    winston.format.json(),
+    winston.format.errors({ stack: true })
+  ),
   transports,
 });
