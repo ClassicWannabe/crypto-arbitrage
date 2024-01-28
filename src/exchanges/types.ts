@@ -12,6 +12,8 @@ import {
   tickerSchema,
   balanceSchema,
   orderSchema,
+  transactionSchema,
+  addressSchema,
 } from "./schema.js";
 import { Fee } from "../types.js";
 
@@ -41,6 +43,13 @@ export interface Exchange {
     amount: number,
     price: number
   ): Promise<Order>;
+  withdraw(
+    currencyCode: string,
+    amount: number,
+    address: string
+  ): Promise<void>;
+  getDeposits(): Promise<Transcation[]>;
+  getDepositAddress(currencyCode: string): Promise<Address>;
 }
 
 export type Market = z.infer<typeof marketSchema>;
@@ -57,6 +66,8 @@ export type OrderBook = z.infer<typeof orderBookSchema> & {
 export type Ticker = z.infer<typeof tickerSchema>;
 export type Balance = z.infer<typeof balanceSchema>;
 export type Order = z.infer<typeof orderSchema>;
+export type Transcation = z.infer<typeof transactionSchema>;
+export type Address = z.infer<typeof addressSchema>;
 
 export enum ExchangeType {
   BINANCE = "binance",

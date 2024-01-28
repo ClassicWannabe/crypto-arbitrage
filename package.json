@@ -19,6 +19,7 @@
     "destroy": "npx cdk destroy --require-approval never"
   },
   "dependencies": {
+    "@prisma/client": "^5.8.1",
     "aws-cdk-lib": "^2.121.1",
     "ccxt": "^4.2.10",
     "constructs": "^10.3.0",

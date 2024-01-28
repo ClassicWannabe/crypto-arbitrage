@@ -15,6 +15,20 @@ export enum TradeOperation {
   SELL = "sell",
 }
 
+export enum OrderStatus {
+  OPEN = "open",
+  CLOSED = "closed",
+  CANCELED = "canceled",
+  EXPIRED = "expired",
+  REJECTED = "rejected",
+}
+
+export enum TransactionType {
+  DEPOSIT = "deposit",
+  WITHDRAWAL = "withdrawal",
+  TRANSFER = "transfer",
+}
+
 export enum FeeType {
   FIXED = "fixed",
   PERCENT = "percent",

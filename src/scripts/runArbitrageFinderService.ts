@@ -6,8 +6,8 @@ import { MultiExchangeCalculator } from "../calculators/MultiExchangeCalculator/
 import { logger } from "../logger/logger.js";
 import { getEnv, sleep } from "../helpers.js";
 import { FileStorage } from "../storages/File/File.js";
-import { Telegram } from "../publishers/Telegram/Telegram.js";
-import { MultiExchangeArbitrage } from "../services/MultiExchangeArbitrage/MultiExchangeArbitrage.js";
+import { TelegramPublisher } from "../publishers/TelegramPublisher/TelegramPublisher.js";
+import { MultiExchangeArbitrageFinder } from "../services/MultiExchangeArbitrageFinder/MultiExchangeArbitrageFinder.js";
 import { ArbitrageFormatter } from "../formatters/ArbitrageFormatter/ArbitrageFormatter.js";
 import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js";
 import { ExchangeType } from "../exchanges/types.js";
@@ -31,11 +31,11 @@ const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = getEnv("telegramGroupId");
 const telegramDeveloperId = getEnv("telegramDeveloperId");
 const bot = new TelegramBot(telegramBotToken);
-const publisher = new Telegram(bot, telegramGroupId);
+const publisher = new TelegramPublisher(bot, telegramGroupId);
 
 const formatter = new ArbitrageFormatter();
 const mutliExchangeCalculator = new MultiExchangeCalculator(exchanges);
-const multiExchangeArbitrageService = new MultiExchangeArbitrage(
+const multiExchangeArbitrageService = new MultiExchangeArbitrageFinder(
   mutliExchangeCalculator,
   formatter,
   publisher,
@@ -61,7 +61,7 @@ const process = async () => {
       iteration++;
     } catch (e) {
       const error = e as Error;
-      console.log(error);
+      logger.error(error);
 
       if (error.stack) {
         await bot.sendMessage(telegramDeveloperId, error.stack);
@@ -95,7 +95,7 @@ const updateSymbols = async () => {
     await storage.saveSymbols(shuffledSymbols);
   } catch (e) {
     const error = e as Error;
-    console.log(error);
+    logger.error(error);
 
     if (error.stack) {
       await bot.sendMessage(telegramDeveloperId, error.stack);

@@ -9,7 +9,7 @@ import { ArbitrageData } from "../../types.js";
 import { logger } from "../../logger/logger.js";
 import { sleep } from "../../helpers.js";
 
-export class MultiExchangeArbitrage implements Service {
+export class MultiExchangeArbitrageFinder implements Service {
   private exchangesLastReloadDate = new Date();
   private symbolPointer = 0;
 

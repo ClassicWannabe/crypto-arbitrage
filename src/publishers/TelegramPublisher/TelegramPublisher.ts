@@ -2,7 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 
 import { Publisher } from "../types.js";
 
-export class Telegram implements Publisher {
+export class TelegramPublisher implements Publisher {
   constructor(
     private readonly bot: TelegramBot,
     private readonly chatId: string | number

@@ -8,37 +8,42 @@ datasource db {
 }
 
 model ArbitrageData {
-  id            String          @id @default(uuid())
-  symbol        String
-  status        StepStatus      @default(UNTOUCHED)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  ArbitrageStep ArbitrageStep[]
+  id               String          @id @default(uuid())
+  symbol           String
+  baseCurrency     String
+  quoteCurrency    String
+  status           ArbitrageStatus @default(UNTOUCHED)
+  confirmationCode Int             @db.UnsignedInt
+  isConfirmed      Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  arbitrageSteps   ArbitrageStep[]
 }
 
 model ArbitrageStep {
-  id              String        @id @default(uuid())
-  ArbitrageData   ArbitrageData @relation(fields: [arbitrageDataId], references: [id])
+  id              String            @id @default(uuid())
+  arbitrageData   ArbitrageData     @relation(fields: [arbitrageDataId], references: [id], onDelete: Cascade)
   arbitrageDataId String
-  order           Int           @db.UnsignedTinyInt
-  type            StepType
-  status          StepStatus    @default(UNTOUCHED)
+  order           Int               @db.UnsignedTinyInt
+  type            ArbitrageStepType
+  status          ArbitrageStatus   @default(UNTOUCHED)
   details         Json
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([arbitrageDataId, order])
 }
 
-enum StepStatus {
+enum ArbitrageStatus {
   PROCESSED
   PROCESSING
   UNTOUCHED
   FAILED
   CANCELLED
+  EXPIRED
 }
 
-enum StepType {
+enum ArbitrageStepType {
   TRADE
-  FEE
   WITHDRAW
-  STATUS
 }

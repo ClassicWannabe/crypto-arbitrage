@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OrderStatus, TradeOperation } from "../types.js";
+import { OrderStatus, TradeOperation, TransactionType } from "../types.js";
 
 export const marketSchema = z.object({
   symbol: z.string(),
@@ -62,4 +62,18 @@ export const orderSchema = z.object({
   filled: z.number(),
   remaining: z.number(),
   cost: z.number(),
+});
+
+export const transactionSchema = z.object({
+  addressFrom: z.string().nullish(),
+  addressTo: z.string().nullish(),
+  type: z.nativeEnum(TransactionType),
+  amount: z.number(),
+  currency: z.string(),
+});
+
+export const addressSchema = z.object({
+  currency: z.string().min(1),
+  network: z.array(z.string().min(1)),
+  address: z.string().min(1),
 });

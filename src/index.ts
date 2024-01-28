@@ -25,11 +25,11 @@ const bot = new TelegramBot(telegramBotToken, {
 const storage = new FileStorage();
 const objectFormatter = new ObjectFormatter();
 
-const runArbitrageServiceChild = new Monitor(
-  path.resolve(__dirname + "/scripts/runArbitrageService.js")
+const runArbitrageFinderServiceChild = new Monitor(
+  path.resolve(__dirname + "/scripts/runArbitrageFinderService.js")
 );
 
-runArbitrageServiceChild.start();
+runArbitrageFinderServiceChild.start();
 let scriptStatus: ScriptStatus = ScriptStatus.RUNNING;
 
 bot.onText(/\/start/, async (msg) => {
@@ -43,7 +43,7 @@ bot.onText(/\/start/, async (msg) => {
   if (scriptStatus === ScriptStatus.RUNNING) {
     await bot.sendMessage(chatId, "Already running...");
   } else {
-    runArbitrageServiceChild.start();
+    runArbitrageFinderServiceChild.start();
     scriptStatus = ScriptStatus.RUNNING;
     await bot.sendMessage(chatId, "Activated arbitrage calculation...");
   }
@@ -57,7 +57,7 @@ bot.onText(/\/start force/, async (msg) => {
     return;
   }
 
-  runArbitrageServiceChild.start();
+  runArbitrageFinderServiceChild.start();
   scriptStatus = ScriptStatus.RUNNING;
 
   await bot.sendMessage(
@@ -75,7 +75,7 @@ bot.onText(/\/stop/, async (msg) => {
   }
 
   if (scriptStatus === ScriptStatus.RUNNING) {
-    runArbitrageServiceChild.stop();
+    runArbitrageFinderServiceChild.stop();
     scriptStatus = ScriptStatus.STOPPED;
     await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
   } else {
@@ -259,6 +259,6 @@ const handleFailedRequest = async (chatId: number) => {
 
 await bot.sendMessage(telegramGroupId, "I am revived!");
 
-runArbitrageServiceChild.on("exit", () => {
+runArbitrageFinderServiceChild.on("exit", () => {
   scriptStatus = ScriptStatus.STOPPED;
 });

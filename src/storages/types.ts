@@ -4,6 +4,8 @@ import {
   arbitrageConfigSchema,
   deepPartialArbitrageConfigSchema,
   rateLimitsSchema,
+  tradeArbitrageStepDetails,
+  withdrawArbitrageStepDetails,
 } from "./schema.js";
 
 export interface Storage {
@@ -20,3 +22,9 @@ export type DeepPartialArbitrageConfig = z.infer<
   typeof deepPartialArbitrageConfigSchema
 >;
 export type RateLimits = z.infer<typeof rateLimitsSchema>;
+export type TradeArbitrageStepDetails = z.infer<
+  typeof tradeArbitrageStepDetails
+>;
+export type WithdrawArbitrageStepDetails = z.infer<
+  typeof withdrawArbitrageStepDetails
+>;

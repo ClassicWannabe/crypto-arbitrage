@@ -3,6 +3,7 @@ import { isNil } from "lodash-es";
 
 import { Exchange, Networks, OrderBook, Ticker } from "../types.js";
 import {
+  addressSchema,
   balanceSchema,
   currenciesSchema,
   currencySchema,
@@ -11,6 +12,7 @@ import {
   orderBookSchema,
   orderSchema,
   tickerSchema,
+  transactionSchema,
 } from "../schema.js";
 import { FeeType } from "../../types.js";
 import { logger } from "../../logger/logger.js";
@@ -224,5 +226,21 @@ export abstract class AbstractExchange implements Exchange {
     );
 
     return orderSchema.parse(order);
+  }
+
+  async withdraw(currencyCode: string, amount: number, address: string) {
+    await this.exchange.withdraw(currencyCode, amount, address);
+  }
+
+  async getDeposits() {
+    const deposits = await this.exchange.fetchDeposits();
+
+    return transactionSchema.array().parse(deposits);
+  }
+
+  async getDepositAddress(currencyCode: string) {
+    const address = await this.exchange.fetchDepositAddress(currencyCode);
+
+    return addressSchema.parse(address);
   }
 }
