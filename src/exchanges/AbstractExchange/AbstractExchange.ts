@@ -1,5 +1,6 @@
 import { Exchange as CcxtExchange } from "ccxt";
 import { isNil } from "lodash-es";
+import { z } from "zod";
 
 import { Exchange, Networks, OrderBook, Ticker } from "../types.js";
 import {
@@ -243,4 +244,32 @@ export abstract class AbstractExchange implements Exchange {
 
     return addressSchema.parse(address);
   }
+
+  amountToPrecision(symbol: string, amount: number) {
+    const formattedValue = this.exchange.amountToPrecision(symbol, amount);
+
+    return z.number().parse(formattedValue);
+  }
+
+  priceToPrecision(symbol: string, price: number) {
+    const formattedValue = this.exchange.priceToPrecision(symbol, price);
+
+    return z.number().parse(formattedValue);
+  }
+
+  costToPrecision(symbol: string, cost: number) {
+    const formattedValue = this.exchange.costToPrecision(symbol, cost);
+
+    return z.number().parse(formattedValue);
+  }
+
+  // TODO: investigate results
+  // currencyToPrecision(currencyCode: string, amount: number) {
+  //   const formattedValue = this.exchange.currencyToPrecision(
+  //     currencyCode,
+  //     amount
+  //   );
+
+  //   return z.number().parse(formattedValue);
+  // }
 }

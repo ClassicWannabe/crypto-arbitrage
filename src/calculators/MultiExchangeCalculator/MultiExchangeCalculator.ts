@@ -4,7 +4,7 @@ import { logger } from "../../logger/logger.js";
 import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 import { ArbitrageStepsCalculator } from "../ArbitrageStepsCalculator/ArbitrageStepsCalculator.js";
 
-type ExchangePair = [Exchange, Exchange];
+type ExchangePair = { withdrawExchange: Exchange; depositExchange: Exchange };
 
 type NetworkPair = [Network, Network];
 
@@ -76,7 +76,7 @@ export class MultiExchangeCalculator {
     symbol: string
   ) {
     const arbitrages: ArbitrageData[] = [];
-    for (const [withdrawExchange, depositExchange] of exchangePairs) {
+    for (const { withdrawExchange, depositExchange } of exchangePairs) {
       const initialData = await this.getInitialData({
         withdrawExchange,
         depositExchange,
@@ -165,24 +165,14 @@ export class MultiExchangeCalculator {
     const [baseCurrencyCommonNetworks, quoteCurrencyCommonNetworks] =
       await Promise.all([
         this.getCommonActiveNetworkNames(
-          [withdrawExchange, depositExchange],
+          { withdrawExchange, depositExchange },
           baseCurrencyCode
         ),
         this.getCommonActiveNetworkNames(
-          [depositExchange, withdrawExchange],
+          { depositExchange, withdrawExchange },
           quoteCurrencyCode
         ),
       ]);
-
-    if (
-      !baseCurrencyCommonNetworks.length ||
-      !quoteCurrencyCommonNetworks.length
-    ) {
-      logger.debug(
-        `Missing common networks ${withdrawExchange.id}-${depositExchange.id}. Symbol: ${symbol}`
-      );
-      return null;
-    }
 
     const [
       withdrawExchangeBaseCurrency,
@@ -213,8 +203,8 @@ export class MultiExchangeCalculator {
       withdrawExchangeTicker,
       depositExchangeTicker,
     ] = await Promise.all([
-      withdrawExchange.getOrderBook(symbol, 1),
-      depositExchange.getOrderBook(symbol, 1),
+      withdrawExchange.getOrderBook(symbol, 20),
+      depositExchange.getOrderBook(symbol, 20),
       withdrawExchange.getTicker(symbol),
       depositExchange.getTicker(symbol),
     ]);
@@ -251,31 +241,39 @@ export class MultiExchangeCalculator {
   }
 
   private async getCommonActiveNetworks(
-    [exchangeOne, exchangeTwo]: ExchangePair,
+    { withdrawExchange, depositExchange }: ExchangePair,
     code: string
   ): Promise<NetworkPair[]> {
     const [currencyOne, currencyTwo] = await Promise.all([
-      exchangeOne.getCurrency(code, true),
-      exchangeTwo.getCurrency(code, true),
+      withdrawExchange.getCurrency(code, true),
+      depositExchange.getCurrency(code, true),
     ]);
 
     if (!currencyOne || !currencyTwo) {
       return [];
     }
 
-    const [networkOneMap, networkTwoMap] = await Promise.all([
-      exchangeOne.getNetworks(code, true),
-      exchangeTwo.getNetworks(code, true),
-    ]);
-    const networksOne = Object.values(networkOneMap);
-    const networksTwo = Object.values(networkTwoMap);
+    const [withdrawExchangeNetworkMap, depositExchangeNetworkMap] =
+      await Promise.all([
+        withdrawExchange.getNetworks(code, true),
+        depositExchange.getNetworks(code, true),
+      ]);
+    const withdrawExchangeNetworks = Object.values(withdrawExchangeNetworkMap);
+    const depositExchangeNetworks = Object.values(depositExchangeNetworkMap);
 
     const commonNetworks = [];
-    for (const networkOne of networksOne) {
-      for (const networkTwo of networksTwo) {
-        if (this.isSameNetwork([networkOne, networkTwo])) {
-          const networkPair: NetworkPair = [networkOne, networkTwo];
+    for (const withdrawNetwork of withdrawExchangeNetworks) {
+      for (const depositNetwork of depositExchangeNetworks) {
+        if (this.isSameNetwork([withdrawNetwork, depositNetwork])) {
+          const networkPair: NetworkPair = [withdrawNetwork, depositNetwork];
           commonNetworks.push(networkPair);
+
+          if (
+            typeof depositNetwork.deposit === "boolean" &&
+            !depositNetwork.deposit
+          ) {
+            logger.warn("The network is not depositable!", { depositNetwork });
+          }
         }
       }
     }
@@ -304,8 +302,8 @@ export class MultiExchangeCalculator {
         }
 
         permutations.push(
-          [exchangeOne, exchangeTwo],
-          [exchangeTwo, exchangeOne]
+          { withdrawExchange: exchangeOne, depositExchange: exchangeTwo },
+          { withdrawExchange: exchangeTwo, depositExchange: exchangeOne }
         );
       }
     }

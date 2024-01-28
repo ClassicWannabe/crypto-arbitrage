@@ -16,6 +16,8 @@ export const marketsSchema = z.record(z.string(), marketSchema);
 export const networkSchema = z.object({
   network: z.string(),
   active: z.boolean().nullish(),
+  deposit: z.boolean().nullish(),
+  withdraw: z.boolean().nullish(),
   fee: z.number().nullish(),
 });
 
@@ -24,6 +26,8 @@ export const networksSchema = z.record(z.string(), networkSchema);
 export const currencySchema = z.object({
   code: z.string(),
   active: z.boolean(),
+  deposit: z.boolean().nullish(),
+  withdraw: z.boolean().nullish(),
   fee: z.number().nullish(),
   networks: networksSchema,
 });

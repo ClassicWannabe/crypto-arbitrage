@@ -13,8 +13,8 @@
     "local:db": "sudo docker compose up",
     "build": "rimraf ./build && tsc",
     "test": "vitest",
-    "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageService.js",
-    "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageService.ts",
+    "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageFinderService.js",
+    "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageFinderService.ts",
     "deploy": "npx cdk deploy -f",
     "destroy": "npx cdk destroy --require-approval never"
   },

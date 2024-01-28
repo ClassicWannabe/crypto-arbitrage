@@ -50,6 +50,10 @@ export interface Exchange {
   ): Promise<void>;
   getDeposits(): Promise<Transcation[]>;
   getDepositAddress(currencyCode: string): Promise<Address>;
+  amountToPrecision(symbol: string, amount: number): number;
+  priceToPrecision(symbol: string, price: number): number;
+  costToPrecision(symbol: string, cost: number): number;
+  // currencyToPrecision(currencyCode: string, amount: number): number;
 }
 
 export type Market = z.infer<typeof marketSchema>;

@@ -32,6 +32,7 @@ export class ArbitrageStepsCalculator {
       market,
     } = this.params;
     const { symbol, base: baseCurrencyCode, quote: quoteCurrencyCode } = market;
+
     const firstTradeEndAmount = Math.min(
       withdrawExchangeOrderBook.bestAsk.base,
       depositExchangeOrderBook.bestBid.base
@@ -47,14 +48,20 @@ export class ArbitrageStepsCalculator {
         networkName,
         symbol,
       });
-    const withdrawAmount = this.feeCalculator.deductFee(
+    const withdrawCurrencyCode = baseCurrencyCode;
+    const rawWithdrawAmount = this.feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
     );
-    const lastTradeStartAmount = this.feeCalculator.deductFee(
+    const withdrawAmount = rawWithdrawAmount;
+    const rawLastTradeStartAmount = this.feeCalculator.deductFee(
       withdrawAmount,
       withdrawFee
     );
+    const lastTradeStartAmount = depositExchange.amountToPrecision(
+      symbol,
+      rawLastTradeStartAmount
+    ); // base currency
     const lastTradePrice = depositExchangeOrderBook.bestBid.quote;
     const lastTradeEndAmount =
       depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount;
@@ -86,7 +93,7 @@ export class ArbitrageStepsCalculator {
         network: networkName,
         coin: {
           amount: withdrawAmount,
-          currencyCode: baseCurrencyCode,
+          currencyCode: withdrawCurrencyCode,
         },
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
@@ -145,26 +152,30 @@ export class ArbitrageStepsCalculator {
     const firstTradeEndAmount =
       firstTradeStartAmount * withdrawExchangeOrderBook.bestBid.quote;
 
-    const feeCalculator = new FeeCalculator();
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
-      await feeCalculator.calculateFees({
+      await this.feeCalculator.calculateFees({
         withdrawExchange,
         depositExchange,
         networkName,
         symbol,
         currencyCode: quoteCurrencyCode,
       });
-    const withdrawAmount = feeCalculator.deductFee(
+    const withdrawAmount = this.feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
     );
-    const lastTradeStartAmount = feeCalculator.deductFee(
+
+    const lastTradeStartAmount = this.feeCalculator.deductFee(
       withdrawAmount,
       withdrawFee
     );
     const lastTradePrice = depositExchangeOrderBook.bestAsk.quote;
-    const lastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
-    const finalAmount = feeCalculator.deductFee(
+    const rawLastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
+    const lastTradeEndAmount = depositExchange.amountToPrecision(
+      symbol,
+      rawLastTradeEndAmount
+    ); // base currency
+    const finalAmount = this.feeCalculator.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
     );
