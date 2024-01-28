@@ -11,6 +11,15 @@ describe(ArbitrageStepsCalculator.name, () => {
     initialParams?: Partial<CalculateArbitrageStepsParams>
   ) {
     const feeCalculator = MockOf<FeeCalculator>("calculateFees", "deductFee");
+    const marketData = {
+      active: true,
+      base: "base",
+      quote: "quote",
+      maker: 10,
+      taker: 10,
+      symbol: "symbol",
+      percentage: true,
+    };
     const params: CalculateArbitrageStepsParams = {
       withdrawExchange: MockOf<Exchange>(),
       depositExchange: MockOf<Exchange>(),
@@ -31,15 +40,8 @@ describe(ArbitrageStepsCalculator.name, () => {
       withdrawExchangeTicker: { symbol: "symbol", percentage: 0 },
       depositExchangeTicker: { symbol: "symbol", percentage: 0 },
       minProfitPercent: 0,
-      market: {
-        active: true,
-        base: "base",
-        quote: "quote",
-        maker: 10,
-        taker: 10,
-        symbol: "symbol",
-        percentage: true,
-      },
+      withdrawExchangeMarketData: marketData,
+      depositExchangeMarketData: marketData,
       ...initialParams,
     };
     const calculator = new ArbitrageStepsCalculator(feeCalculator, params);

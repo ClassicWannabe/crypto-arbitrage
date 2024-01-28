@@ -13,6 +13,7 @@ import {
   TradeOperation,
   TradeStep,
   WithdrawStep,
+  WithdrawStepNetworkDetails,
 } from "../../types.js";
 import { Formatter } from "../types.js";
 import { customDeepmerge } from "../../storages/helpers.js";
@@ -73,6 +74,7 @@ export class ArbitrageFormatter implements Formatter {
       operation,
       price,
       dayChangePercentage,
+      isActive,
     } = step;
     const exchangeString = this.formatExchange(exchangeId);
     const priceString = this.formatPrice(price);
@@ -84,7 +86,9 @@ export class ArbitrageFormatter implements Formatter {
     });
     const dayChangePercentageString =
       this.formatDayChangePercentage(dayChangePercentage);
-    return `${exchangeString}.\n${priceString}.\n${dayChangePercentageString}\n${operationString}\n\n`;
+    const isActiveString = this.formatIsActive(isActive);
+
+    return `${exchangeString}.\n${isActiveString}\n${priceString}.\n${dayChangePercentageString}\n${operationString}\n\n`;
   }
 
   private formatExchange(exchange: string) {
@@ -115,9 +119,18 @@ export class ArbitrageFormatter implements Formatter {
     symbol: string;
   }) {
     const operationTypeString = this.formatOperationType(operation);
-    return `Операция: ${operationTypeString} ${symbol}. Обмен ${this.formatCoin(
-      startCoin
-    )} на ${this.formatCoin(endCoin)}`;
+    const swapOperationString = this.formatSwapOperation({
+      startCoin,
+      endCoin,
+    });
+    return `Операция: ${operationTypeString} ${symbol}.\n${swapOperationString}`;
+  }
+
+  private formatSwapOperation({
+    startCoin,
+    endCoin,
+  }: Pick<TradeStep, "startCoin" | "endCoin">) {
+    return `Обмен ${this.formatCoin(startCoin)} на ${this.formatCoin(endCoin)}`;
   }
 
   private formatOperationType(operation: TradeOperation) {
@@ -134,10 +147,49 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatWitdrawStep(step: WithdrawStep) {
-    const { network, coin } = step;
-    return `Перенос по сети ${this.makeBold(network)} ${this.formatCoin(
+    const {
+      network: { name: networkName, withdrawNetwork, depositNetwork },
+      coin,
+    } = step;
+    const withdrawNetworkString = this.formatNetworkDetails(
+      "withdraw",
+      withdrawNetwork
+    );
+    const depositNetworkString = this.formatNetworkDetails(
+      "deposit",
+      depositNetwork
+    );
+
+    return `Перенос по сети ${this.makeBold(networkName)} ${this.formatCoin(
       coin
-    )}\n\n`;
+    )}\n${withdrawNetworkString}\n${depositNetworkString}\n\n`;
+  }
+
+  private formatNetworkDetails(
+    type: "withdraw" | "deposit",
+    details: WithdrawStepNetworkDetails
+  ) {
+    const isActiveString = this.formatIsActive(details.isActive);
+    const isWithdrawableString = this.formatIsWithdrawable(
+      details.isWithdrawable
+    );
+    const isDepositableString = this.formatIsDepositable(details.isDepositable);
+    const exchangeString =
+      type === "withdraw" ? "Сеть Платформы 1" : "Сеть Платформы 2";
+
+    return `${exchangeString}\n${isActiveString}\n${isWithdrawableString}\n${isDepositableString}`;
+  }
+
+  private formatIsActive(isActive?: boolean | null) {
+    return `Активный: ${this.formatBoolean(isActive)}`;
+  }
+
+  private formatIsWithdrawable(isWithdrawable?: boolean | null) {
+    return `Снимаемый: ${this.formatBoolean(isWithdrawable)}`;
+  }
+
+  private formatIsDepositable(isDepositable?: boolean | null) {
+    return `Пополняемый: ${this.formatBoolean(isDepositable)}`;
   }
 
   private formatStatusStep(step: StatusStep) {
@@ -159,6 +211,13 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatNumber(num: number, maximumFractionDigits: number = 18) {
     return num.toLocaleString(undefined, { maximumFractionDigits });
+  }
+
+  private formatBoolean(bool?: boolean | null) {
+    if (typeof bool !== "boolean") {
+      return `❓`;
+    }
+    return bool ? "➕" : "➖";
   }
 
   private async generateImage(steps: TradeStep[]) {

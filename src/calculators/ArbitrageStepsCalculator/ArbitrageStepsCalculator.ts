@@ -1,4 +1,10 @@
-import { Exchange, Market, OrderBook, Ticker } from "../../exchanges/types.js";
+import {
+  Exchange,
+  Market,
+  Network,
+  OrderBook,
+  Ticker,
+} from "../../exchanges/types.js";
 import { ArbitrageSteps, ExchangeEvent, TradeOperation } from "../../types.js";
 import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 
@@ -9,8 +15,14 @@ export type CalculateArbitrageStepsParams = {
   depositExchangeTicker: Ticker;
   withdrawExchange: Exchange;
   depositExchange: Exchange;
-  market: Market;
+  withdrawExchangeMarketData: Market;
+  depositExchangeMarketData: Market;
   minProfitPercent: number;
+};
+
+type CalculateParams = {
+  withdrawNetwork: Network;
+  depositNetwork: Network;
 };
 
 export class ArbitrageStepsCalculator {
@@ -19,9 +31,10 @@ export class ArbitrageStepsCalculator {
     private readonly params: CalculateArbitrageStepsParams
   ) {}
 
-  async calculateForwardArbitrageSteps(
-    networkName: string
-  ): Promise<ArbitrageSteps | null> {
+  async calculateForwardArbitrageSteps({
+    withdrawNetwork,
+    depositNetwork,
+  }: CalculateParams): Promise<ArbitrageSteps | null> {
     const {
       withdrawExchange,
       depositExchange,
@@ -29,9 +42,15 @@ export class ArbitrageStepsCalculator {
       depositExchangeOrderBook,
       withdrawExchangeTicker,
       depositExchangeTicker,
-      market,
+      withdrawExchangeMarketData,
+      depositExchangeMarketData,
     } = this.params;
-    const { symbol, base: baseCurrencyCode, quote: quoteCurrencyCode } = market;
+    const {
+      symbol,
+      base: baseCurrencyCode,
+      quote: quoteCurrencyCode,
+    } = withdrawExchangeMarketData;
+    const networkName = withdrawNetwork.network;
 
     const firstTradeEndAmount = Math.min(
       withdrawExchangeOrderBook.bestAsk.base,
@@ -86,11 +105,24 @@ export class ArbitrageStepsCalculator {
         price: firstTradePrice,
         orderBook: withdrawExchangeOrderBook,
         dayChangePercentage: withdrawExchangeTicker.percentage,
+        isActive: withdrawExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
         event: ExchangeEvent.WITHDRAW,
-        network: networkName,
+        network: {
+          name: networkName,
+          withdrawNetwork: {
+            isActive: withdrawNetwork.active,
+            isDepositable: withdrawNetwork.deposit,
+            isWithdrawable: withdrawNetwork.withdraw,
+          },
+          depositNetwork: {
+            isActive: depositNetwork.active,
+            isDepositable: depositNetwork.deposit,
+            isWithdrawable: depositNetwork.withdraw,
+          },
+        },
         coin: {
           amount: withdrawAmount,
           currencyCode: withdrawCurrencyCode,
@@ -112,6 +144,7 @@ export class ArbitrageStepsCalculator {
         price: lastTradePrice,
         orderBook: depositExchangeOrderBook,
         dayChangePercentage: depositExchangeTicker.percentage,
+        isActive: depositExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {
@@ -131,9 +164,10 @@ export class ArbitrageStepsCalculator {
     return null;
   }
 
-  async calculateReverseArbitrageSteps(
-    networkName: string
-  ): Promise<ArbitrageSteps | null> {
+  async calculateReverseArbitrageSteps({
+    withdrawNetwork,
+    depositNetwork,
+  }: CalculateParams): Promise<ArbitrageSteps | null> {
     const {
       withdrawExchange,
       depositExchange,
@@ -141,9 +175,15 @@ export class ArbitrageStepsCalculator {
       depositExchangeOrderBook,
       withdrawExchangeTicker,
       depositExchangeTicker,
-      market,
+      withdrawExchangeMarketData,
+      depositExchangeMarketData,
     } = this.params;
-    const { symbol, base: baseCurrencyCode, quote: quoteCurrencyCode } = market;
+    const {
+      symbol,
+      base: baseCurrencyCode,
+      quote: quoteCurrencyCode,
+    } = withdrawExchangeMarketData;
+    const networkName = withdrawNetwork.network;
     const firstTradeStartAmount = Math.min(
       withdrawExchangeOrderBook.bestBid.base,
       depositExchangeOrderBook.bestAsk.base
@@ -196,11 +236,24 @@ export class ArbitrageStepsCalculator {
         price: firstTradePrice,
         orderBook: withdrawExchangeOrderBook,
         dayChangePercentage: withdrawExchangeTicker.percentage,
+        isActive: withdrawExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
         event: ExchangeEvent.WITHDRAW,
-        network: networkName,
+        network: {
+          name: networkName,
+          withdrawNetwork: {
+            isActive: withdrawNetwork.active,
+            isDepositable: withdrawNetwork.deposit,
+            isWithdrawable: withdrawNetwork.withdraw,
+          },
+          depositNetwork: {
+            isActive: depositNetwork.active,
+            isDepositable: depositNetwork.deposit,
+            isWithdrawable: depositNetwork.withdraw,
+          },
+        },
         coin: {
           amount: withdrawAmount,
           currencyCode: quoteCurrencyCode,
@@ -222,6 +275,7 @@ export class ArbitrageStepsCalculator {
         price: lastTradePrice,
         orderBook: depositExchangeOrderBook,
         dayChangePercentage: depositExchangeTicker.percentage,
+        isActive: depositExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {

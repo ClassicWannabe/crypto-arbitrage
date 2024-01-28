@@ -71,15 +71,26 @@ export type TradeStep = {
   price: number;
   exchangeId: string;
   dayChangePercentage?: number | null;
+  isActive?: boolean;
 };
 
 export type FeeStep = Pick<Fee, "type" | "value"> & {
   event: ExchangeEvent.PAY_FEE;
 };
 
+export type WithdrawStepNetworkDetails = {
+  isActive?: boolean | null;
+  isWithdrawable?: boolean | null;
+  isDepositable?: boolean | null;
+};
+
 export type WithdrawStep = {
   event: ExchangeEvent.WITHDRAW;
-  network: string;
+  network: {
+    name: string;
+    withdrawNetwork: WithdrawStepNetworkDetails;
+    depositNetwork: WithdrawStepNetworkDetails;
+  };
   coin: CurrencyAmount;
 };
 

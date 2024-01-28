@@ -6,7 +6,7 @@ import { ArbitrageStepsCalculator } from "../ArbitrageStepsCalculator/ArbitrageS
 
 type ExchangePair = { withdrawExchange: Exchange; depositExchange: Exchange };
 
-type NetworkPair = [Network, Network];
+type NetworkPair = { withdrawNetwork: Network; depositNetwork: Network };
 
 export class MultiExchangeCalculator {
   private readonly exchanges: Exchange[];
@@ -88,6 +88,7 @@ export class MultiExchangeCalculator {
 
       const {
         withdrawExchangeMarketData,
+        depositExchangeMarketData,
         withdrawExchangeOrderBook,
         depositExchangeOrderBook,
         baseCurrencyCommonNetworks,
@@ -104,17 +105,18 @@ export class MultiExchangeCalculator {
           depositExchange,
           withdrawExchangeOrderBook,
           depositExchangeOrderBook,
-          market: withdrawExchangeMarketData,
+          withdrawExchangeMarketData,
+          depositExchangeMarketData,
           minProfitPercent: this.minProfitPercent,
           withdrawExchangeTicker,
           depositExchangeTicker,
         }
       );
 
-      for (const networkName of baseCurrencyCommonNetworks) {
+      for (const networkPair of baseCurrencyCommonNetworks) {
         const steps =
           await arbitrageStepsCalculator.calculateForwardArbitrageSteps(
-            networkName
+            networkPair
           );
 
         if (steps) {
@@ -122,10 +124,10 @@ export class MultiExchangeCalculator {
         }
       }
 
-      for (const networkName of quoteCurrencyCommonNetworks) {
+      for (const networkPair of quoteCurrencyCommonNetworks) {
         const steps =
           await arbitrageStepsCalculator.calculateReverseArbitrageSteps(
-            networkName
+            networkPair
           );
 
         if (steps) {
@@ -164,38 +166,39 @@ export class MultiExchangeCalculator {
 
     const [baseCurrencyCommonNetworks, quoteCurrencyCommonNetworks] =
       await Promise.all([
-        this.getCommonActiveNetworkNames(
+        this.getCommonActiveNetworks(
           { withdrawExchange, depositExchange },
           baseCurrencyCode
         ),
-        this.getCommonActiveNetworkNames(
+        this.getCommonActiveNetworks(
           { depositExchange, withdrawExchange },
           quoteCurrencyCode
         ),
       ]);
 
-    const [
-      withdrawExchangeBaseCurrency,
-      withdrawExchangeQuoteCurrency,
-      depositExchangeBaseCurrency,
-      depositExchangeQuoteCurrency,
-    ] = await Promise.all([
-      withdrawExchange.getCurrency(baseCurrencyCode, true),
-      withdrawExchange.getCurrency(quoteCurrencyCode, true),
-      depositExchange.getCurrency(baseCurrencyCode, true),
-      depositExchange.getCurrency(quoteCurrencyCode, true),
-    ]);
-    if (
-      !withdrawExchangeBaseCurrency ||
-      !withdrawExchangeQuoteCurrency ||
-      !depositExchangeBaseCurrency ||
-      !depositExchangeQuoteCurrency
-    ) {
-      logger.debug(
-        `Missing active currencies ${withdrawExchange.id}-${depositExchange.id}. Symbol: ${symbol}`
-      );
-      return null;
-    }
+    // TODO: investigate if this part is needed for validation
+    // const [
+    //   withdrawExchangeBaseCurrency,
+    //   withdrawExchangeQuoteCurrency,
+    //   depositExchangeBaseCurrency,
+    //   depositExchangeQuoteCurrency,
+    // ] = await Promise.all([
+    //   withdrawExchange.getCurrency(baseCurrencyCode, true),
+    //   withdrawExchange.getCurrency(quoteCurrencyCode, true),
+    //   depositExchange.getCurrency(baseCurrencyCode, true),
+    //   depositExchange.getCurrency(quoteCurrencyCode, true),
+    // ]);
+    // if (
+    //   !withdrawExchangeBaseCurrency ||
+    //   !withdrawExchangeQuoteCurrency ||
+    //   !depositExchangeBaseCurrency ||
+    //   !depositExchangeQuoteCurrency
+    // ) {
+    //   logger.debug(
+    //     `Missing active currencies ${withdrawExchange.id}-${depositExchange.id}. Symbol: ${symbol}`
+    //   );
+    //   return null;
+    // }
 
     const [
       withdrawExchangeOrderBook,
@@ -228,18 +231,6 @@ export class MultiExchangeCalculator {
     };
   }
 
-  private async getCommonActiveNetworkNames(
-    exchanges: ExchangePair,
-    code: string
-  ): Promise<string[]> {
-    const networks = await this.getCommonActiveNetworks(exchanges, code);
-
-    return networks.reduce<string[]>((names, [network1]) => {
-      names.push(network1.network);
-      return names;
-    }, []);
-  }
-
   private async getCommonActiveNetworks(
     { withdrawExchange, depositExchange }: ExchangePair,
     code: string
@@ -265,7 +256,7 @@ export class MultiExchangeCalculator {
     for (const withdrawNetwork of withdrawExchangeNetworks) {
       for (const depositNetwork of depositExchangeNetworks) {
         if (this.isSameNetwork([withdrawNetwork, depositNetwork])) {
-          const networkPair: NetworkPair = [withdrawNetwork, depositNetwork];
+          const networkPair: NetworkPair = { withdrawNetwork, depositNetwork };
           commonNetworks.push(networkPair);
 
           if (

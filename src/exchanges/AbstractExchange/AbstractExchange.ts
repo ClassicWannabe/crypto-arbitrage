@@ -246,21 +246,42 @@ export abstract class AbstractExchange implements Exchange {
   }
 
   amountToPrecision(symbol: string, amount: number) {
-    const formattedValue = this.exchange.amountToPrecision(symbol, amount);
+    try {
+      const formattedValue = this.exchange.amountToPrecision(symbol, amount);
 
-    return z.number().parse(formattedValue);
+      return z.number().parse(+formattedValue);
+    } catch (e) {
+      const error = e as Error;
+      logger.warn(error.stack);
+      logger.warn({ symbol, amount, exchange: this.exchange.id });
+    }
+    return amount;
   }
 
   priceToPrecision(symbol: string, price: number) {
-    const formattedValue = this.exchange.priceToPrecision(symbol, price);
+    try {
+      const formattedValue = this.exchange.priceToPrecision(symbol, price);
 
-    return z.number().parse(formattedValue);
+      return z.number().parse(+formattedValue);
+    } catch (e) {
+      const error = e as Error;
+      logger.warn(error.stack);
+      logger.warn({ symbol, price, exchange: this.exchange.id });
+    }
+    return price;
   }
 
   costToPrecision(symbol: string, cost: number) {
-    const formattedValue = this.exchange.costToPrecision(symbol, cost);
+    try {
+      const formattedValue = this.exchange.costToPrecision(symbol, cost);
 
-    return z.number().parse(formattedValue);
+      return z.number().parse(+formattedValue);
+    } catch (e) {
+      const error = e as Error;
+      logger.warn(error.stack);
+      logger.warn({ symbol, cost, exchange: this.exchange.id });
+    }
+    return cost;
   }
 
   // TODO: investigate results
