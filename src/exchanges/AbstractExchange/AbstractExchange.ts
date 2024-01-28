@@ -3,11 +3,13 @@ import { isNil } from "lodash-es";
 
 import { Exchange, Networks, OrderBook, Ticker } from "../types.js";
 import {
+  balanceSchema,
   currenciesSchema,
   currencySchema,
   marketSchema,
   marketsSchema,
   orderBookSchema,
+  orderSchema,
   tickerSchema,
 } from "../schema.js";
 import { FeeType } from "../../types.js";
@@ -190,5 +192,37 @@ export abstract class AbstractExchange implements Exchange {
 
   resetTickerCache(): void {
     this.tickers = {};
+  }
+
+  async getBalance() {
+    const balance = await this.exchange.fetchBalance();
+
+    return balanceSchema.parse(balance);
+  }
+
+  async getOrder(id: string, symbol: string) {
+    const order = await this.exchange.fetchOrder(id, symbol);
+
+    return orderSchema.parse(order);
+  }
+
+  async createLimitBuyOrder(symbol: string, amount: number, price: number) {
+    const order = await this.exchange.createLimitBuyOrder(
+      symbol,
+      amount,
+      price
+    );
+
+    return orderSchema.parse(order);
+  }
+
+  async createLimitSellOrder(symbol: string, amount: number, price: number) {
+    const order = await this.exchange.createLimitSellOrder(
+      symbol,
+      amount,
+      price
+    );
+
+    return orderSchema.parse(order);
   }
 }

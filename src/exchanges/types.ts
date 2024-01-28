@@ -10,6 +10,8 @@ import {
   orderBookSchema,
   quotationSchema,
   tickerSchema,
+  balanceSchema,
+  orderSchema,
 } from "./schema.js";
 import { Fee } from "../types.js";
 
@@ -27,6 +29,18 @@ export interface Exchange {
   getWithdrawFee(code: string, networkName?: string): Promise<Fee | null>;
   getTicker(symbol: string): Promise<Ticker>;
   resetTickerCache(): void;
+  getBalance(): Promise<Balance>;
+  getOrder(id: string, symbol: string): Promise<Order>;
+  createLimitBuyOrder(
+    symbol: string,
+    amount: number,
+    price: number
+  ): Promise<Order>;
+  createLimitSellOrder(
+    symbol: string,
+    amount: number,
+    price: number
+  ): Promise<Order>;
 }
 
 export type Market = z.infer<typeof marketSchema>;
@@ -41,6 +55,8 @@ export type OrderBook = z.infer<typeof orderBookSchema> & {
   bestAsk: Quotation;
 };
 export type Ticker = z.infer<typeof tickerSchema>;
+export type Balance = z.infer<typeof balanceSchema>;
+export type Order = z.infer<typeof orderSchema>;
 
 export enum ExchangeType {
   BINANCE = "binance",

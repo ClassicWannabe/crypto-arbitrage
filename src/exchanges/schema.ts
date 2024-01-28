@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OrderStatus, TradeOperation } from "../types.js";
 
 export const marketSchema = z.object({
   symbol: z.string(),
@@ -42,4 +43,23 @@ export const orderBookSchema = z.object({
 export const tickerSchema = z.object({
   symbol: z.string(),
   percentage: z.number().nullish(),
+});
+
+export const balanceSchema = z.object({
+  free: z.record(z.string(), z.number()),
+  used: z.record(z.string(), z.number()),
+  total: z.record(z.string(), z.number()),
+});
+
+export const orderSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  status: z.nativeEnum(OrderStatus),
+  side: z.nativeEnum(TradeOperation),
+  price: z.number(),
+  average: z.number(),
+  amount: z.number(),
+  filled: z.number(),
+  remaining: z.number(),
+  cost: z.number(),
 });
