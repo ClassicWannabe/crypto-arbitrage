@@ -15,8 +15,8 @@
     "test": "vitest",
     "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageFinderService.js",
     "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageFinderService.ts",
-    "deploy": "npx cdk deploy -f",
-    "destroy": "npx cdk destroy --require-approval never"
+    "deploy": "npx cdk deploy",
+    "destroy": "npx cdk destroy"
   },
   "dependencies": {
     "@prisma/client": "^5.8.1",
