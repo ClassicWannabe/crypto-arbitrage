@@ -19,6 +19,7 @@ export const arbitrageConfigSchema = z.object({
   parallelProcessSymbolNumber: z.number().min(1),
   rateLimits: rateLimitsSchema,
   ignoredSymbols: z.array(z.string()),
+  targetCoins: z.array(z.string()).nullable(),
 });
 
 export const deepPartialArbitrageConfigSchema =

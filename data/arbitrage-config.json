@@ -1,14 +1,15 @@
 {
   "minProfitPercent": 1.5,
-  "parallelProcessSymbolNumber": 10,
+  "parallelProcessSymbolNumber": 8,
   "rateLimits": {
     "okx": 200,
     "binance": null,
     "kucoin": null,
-    "mexc": 5000,
+    "mexc": 1000,
     "bybit": null,
     "htx": null,
     "gateio": null
   },
-  "ignoredSymbols": ["TIME/USDT", "GEM/USDT", "SOLS/USDT"]
+  "ignoredSymbols": ["TIME/USDT", "GEM/USDT", "SOLS/USDT"],
+  "targetCoins": ["USDT"]
 }

@@ -12,7 +12,11 @@ export class MultiExchangeCalculator {
   private readonly exchanges: Exchange[];
   private minProfitPercent = 0;
 
-  constructor(exchanges: Exchange[], minProfitPercent = 0) {
+  constructor(
+    exchanges: Exchange[],
+    minProfitPercent = 0,
+    private readonly targetCoins: string[] | null
+  ) {
     this.checkExchanges(exchanges);
     this.checkMinProfitPercent(minProfitPercent);
     this.exchanges = exchanges;
@@ -164,7 +168,7 @@ export class MultiExchangeCalculator {
     const baseCurrencyCode = withdrawExchangeMarketData.base;
     const quoteCurrencyCode = withdrawExchangeMarketData.quote;
 
-    const [baseCurrencyCommonNetworks, quoteCurrencyCommonNetworks] =
+    let [baseCurrencyCommonNetworks, quoteCurrencyCommonNetworks] =
       await Promise.all([
         this.getCommonActiveNetworks(
           { withdrawExchange, depositExchange },
@@ -175,6 +179,33 @@ export class MultiExchangeCalculator {
           quoteCurrencyCode
         ),
       ]);
+
+    if (
+      !baseCurrencyCommonNetworks.length &&
+      !quoteCurrencyCommonNetworks.length
+    ) {
+      logger.debug(`Missing common active networks ${symbol}`);
+      return null;
+    }
+
+    if (this.targetCoins) {
+      const isBaseCurrencyIncluded =
+        this.targetCoins.includes(baseCurrencyCode);
+      const isQuoteCurrencyIncluded =
+        this.targetCoins.includes(quoteCurrencyCode);
+      if (!isBaseCurrencyIncluded && !isQuoteCurrencyIncluded) {
+        logger.debug(`Market data is not part of the target coins ${symbol}`);
+        return null;
+      }
+
+      const isAnyIncluded = isBaseCurrencyIncluded && isQuoteCurrencyIncluded;
+
+      if (!isAnyIncluded && isBaseCurrencyIncluded) {
+        baseCurrencyCommonNetworks = [];
+      } else if (!isAnyIncluded && isQuoteCurrencyIncluded) {
+        quoteCurrencyCommonNetworks = [];
+      }
+    }
 
     // TODO: investigate if this part is needed for validation
     // const [

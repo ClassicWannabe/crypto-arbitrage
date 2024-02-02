@@ -55,9 +55,9 @@ export class ArbitrageStepsCalculator {
     const firstTradeEndAmount = Math.min(
       withdrawExchangeOrderBook.bestAsk.base,
       depositExchangeOrderBook.bestBid.base
-    );
+    ); // base currency
     const firstTradePrice = withdrawExchangeOrderBook.bestAsk.quote;
-    const firstTradeStartAmount = firstTradeEndAmount * firstTradePrice;
+    const firstTradeStartAmount = firstTradeEndAmount * firstTradePrice; // quote currency
 
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
       await this.feeCalculator.calculateFees({
@@ -83,7 +83,7 @@ export class ArbitrageStepsCalculator {
     ); // base currency
     const lastTradePrice = depositExchangeOrderBook.bestBid.quote;
     const lastTradeEndAmount =
-      depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount;
+      depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount; // quote currency
     const finalAmount = this.feeCalculator.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
@@ -187,10 +187,9 @@ export class ArbitrageStepsCalculator {
     const firstTradeStartAmount = Math.min(
       withdrawExchangeOrderBook.bestBid.base,
       depositExchangeOrderBook.bestAsk.base
-    );
+    ); // base currency
     const firstTradePrice = withdrawExchangeOrderBook.bestBid.quote;
-    const firstTradeEndAmount =
-      firstTradeStartAmount * withdrawExchangeOrderBook.bestBid.quote;
+    const firstTradeEndAmount = firstTradeStartAmount * firstTradePrice; // quote currency
 
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
       await this.feeCalculator.calculateFees({
@@ -208,7 +207,7 @@ export class ArbitrageStepsCalculator {
     const lastTradeStartAmount = this.feeCalculator.deductFee(
       withdrawAmount,
       withdrawFee
-    );
+    ); // quote currency
     const lastTradePrice = depositExchangeOrderBook.bestAsk.quote;
     const rawLastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
     const lastTradeEndAmount = depositExchange.amountToPrecision(

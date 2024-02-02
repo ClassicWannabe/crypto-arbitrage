@@ -34,7 +34,11 @@ const bot = new TelegramBot(telegramBotToken);
 const publisher = new TelegramPublisher(bot, telegramGroupId);
 
 const formatter = new ArbitrageFormatter();
-const mutliExchangeCalculator = new MultiExchangeCalculator(exchanges);
+const mutliExchangeCalculator = new MultiExchangeCalculator(
+  exchanges,
+  arbitrageConfig.minProfitPercent,
+  arbitrageConfig.targetCoins
+);
 const multiExchangeArbitrageService = new MultiExchangeArbitrageFinder(
   mutliExchangeCalculator,
   formatter,
@@ -61,7 +65,7 @@ const process = async () => {
       iteration++;
     } catch (e) {
       const error = e as Error;
-      logger.error(error);
+      logger.error(error.stack);
 
       if (error.stack) {
         await bot.sendMessage(telegramDeveloperId, error.stack);
@@ -95,7 +99,7 @@ const updateSymbols = async () => {
     await storage.saveSymbols(shuffledSymbols);
   } catch (e) {
     const error = e as Error;
-    logger.error(error);
+    logger.error(error.stack);
 
     if (error.stack) {
       await bot.sendMessage(telegramDeveloperId, error.stack);
