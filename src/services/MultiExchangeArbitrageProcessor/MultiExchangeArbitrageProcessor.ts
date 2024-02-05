@@ -28,14 +28,14 @@ export class MultiExchangeArbitrageProcessor implements Service {
     await this.expireArbitrages(arbitrages);
 
     for (const arbitrage of validArbitrages) {
+      this.processArbitrage(arbitrage);
     }
   }
 
-  private filterArbitrages(arbitrages: ArbitrageData[]) {
-    return arbitrages.filter(
-      (arbitrage) =>
-        !this.isExpiredArbitrage(arbitrage) && arbitrage.isConfirmed
-    );
+  private filterArbitrages(
+    arbitrages: ArbitrageData[]
+  ): ProcessableArbitrage[] {
+    return arbitrages.filter(this.isProcessableArbitrage);
   }
 
   private async expireArbitrages(arbitrages: ArbitrageData[]) {
@@ -43,6 +43,12 @@ export class MultiExchangeArbitrageProcessor implements Service {
     const expireArbitrageIds = expiredArbitrages.map(({ id }) => id);
 
     await this.arbitrageRepo.expireArbitrages(expireArbitrageIds);
+  }
+
+  private isProcessableArbitrage(
+    arbitrage: ArbitrageData
+  ): arbitrage is ProcessableArbitrage {
+    return !this.isExpiredArbitrage(arbitrage) && arbitrage.isConfirmed;
   }
 
   private isExpiredArbitrage(arbitrage: ArbitrageData) {
@@ -69,9 +75,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
           break;
         }
         case ArbitrageStepType.WITHDRAW: {
-          updatedStep = await this.processWithdrawArbitrageStep(
-            step,
-          );
+          updatedStep = await this.processWithdrawArbitrageStep(step);
           break;
         }
       }
@@ -180,7 +184,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
   }
 
   private async processWithdrawArbitrageStep(
-    withdrawStep: WithdrawArbitrageStep,
+    withdrawStep: WithdrawArbitrageStep
   ) {
     this.checkArbitrageStepStatus(withdrawStep.status);
     if (withdrawStep.status === ArbitrageStatus.PROCESSED) {
@@ -188,7 +192,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
     }
 
     if (withdrawStep.status === ArbitrageStatus.PROCESSING) {
-      return await this.handleProcessingWithdrawArbitrageStep(withdrawStep)
+      return await this.handleProcessingWithdrawArbitrageStep(withdrawStep);
     }
 
     if (withdrawStep.status === ArbitrageStatus.UNTOUCHED) {

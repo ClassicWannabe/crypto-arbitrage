@@ -116,6 +116,8 @@ export class MultiExchangeCalculator {
           depositExchangeTicker,
         }
       );
+      const baseCurrencyCode = withdrawExchangeMarketData.base;
+      const quoteCurrencyCode = withdrawExchangeMarketData.quote;
 
       for (const networkPair of baseCurrencyCommonNetworks) {
         const steps =
@@ -124,7 +126,12 @@ export class MultiExchangeCalculator {
           );
 
         if (steps) {
-          arbitrages.push({ symbol, steps });
+          arbitrages.push({
+            symbol,
+            steps,
+            baseCurrencyCode,
+            quoteCurrencyCode,
+          });
         }
       }
 
@@ -135,7 +142,12 @@ export class MultiExchangeCalculator {
           );
 
         if (steps) {
-          arbitrages.push({ symbol, steps });
+          arbitrages.push({
+            symbol,
+            steps,
+            baseCurrencyCode,
+            quoteCurrencyCode,
+          });
         }
       }
     }
@@ -160,7 +172,7 @@ export class MultiExchangeCalculator {
 
     if (!withdrawExchangeMarketData || !depositExchangeMarketData) {
       logger.debug(
-        `Missing active market data ${withdrawExchange.id}-${depositExchange.id}`
+        `Missing active market data ${symbol} ${withdrawExchange.id}-${depositExchange.id}`
       );
       return null;
     }
@@ -206,30 +218,6 @@ export class MultiExchangeCalculator {
         quoteCurrencyCommonNetworks = [];
       }
     }
-
-    // TODO: investigate if this part is needed for validation
-    // const [
-    //   withdrawExchangeBaseCurrency,
-    //   withdrawExchangeQuoteCurrency,
-    //   depositExchangeBaseCurrency,
-    //   depositExchangeQuoteCurrency,
-    // ] = await Promise.all([
-    //   withdrawExchange.getCurrency(baseCurrencyCode, true),
-    //   withdrawExchange.getCurrency(quoteCurrencyCode, true),
-    //   depositExchange.getCurrency(baseCurrencyCode, true),
-    //   depositExchange.getCurrency(quoteCurrencyCode, true),
-    // ]);
-    // if (
-    //   !withdrawExchangeBaseCurrency ||
-    //   !withdrawExchangeQuoteCurrency ||
-    //   !depositExchangeBaseCurrency ||
-    //   !depositExchangeQuoteCurrency
-    // ) {
-    //   logger.debug(
-    //     `Missing active currencies ${withdrawExchange.id}-${depositExchange.id}. Symbol: ${symbol}`
-    //   );
-    //   return null;
-    // }
 
     const [
       withdrawExchangeOrderBook,

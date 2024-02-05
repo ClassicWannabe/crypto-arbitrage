@@ -81,4 +81,5 @@ export enum ExchangeType {
   KUCOIN = "kucoin",
   MEXC = "mexc",
   OKX = "okx",
+  BITGET = "bitget",
 }

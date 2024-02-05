@@ -8,8 +8,10 @@
     "mexc": 1000,
     "bybit": null,
     "htx": null,
-    "gateio": null
+    "gateio": null,
+    "bitget": null
   },
   "ignoredSymbols": ["TIME/USDT", "GEM/USDT", "SOLS/USDT"],
-  "targetCoins": ["USDT"]
+  "targetCoins": ["USDT"],
+  "timeout": 20000
 }

@@ -31,6 +31,7 @@ export const getExchangeDefaultRateLimits = (): Required<RateLimits> => {
     kucoin: new ccxt.kucoin().rateLimit,
     mexc: new ccxt.mexc().rateLimit,
     okx: new ccxt.okx().rateLimit,
+    bitget: new ccxt.bitget().rateLimit,
   };
 };
 

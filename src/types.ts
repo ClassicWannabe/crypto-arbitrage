@@ -41,6 +41,8 @@ export type Fee = {
 
 export type ArbitrageData = {
   symbol: string;
+  baseCurrencyCode: string;
+  quoteCurrencyCode: string;
   steps: ArbitrageSteps;
 };
 

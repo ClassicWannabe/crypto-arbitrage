@@ -12,6 +12,7 @@ export const rateLimitsSchema = z.object({
   bybit: rateLimitSchema,
   htx: rateLimitSchema,
   gateio: rateLimitSchema,
+  bitget: rateLimitSchema,
 });
 
 export const arbitrageConfigSchema = z.object({
@@ -20,6 +21,7 @@ export const arbitrageConfigSchema = z.object({
   rateLimits: rateLimitsSchema,
   ignoredSymbols: z.array(z.string()),
   targetCoins: z.array(z.string()).nullable(),
+  timeout: z.number().min(1000),
 });
 
 export const deepPartialArbitrageConfigSchema =

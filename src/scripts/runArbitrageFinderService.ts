@@ -24,8 +24,9 @@ const kucoin = exchangeFactory.getExchange(ExchangeType.KUCOIN);
 const gateio = exchangeFactory.getExchange(ExchangeType.GATEIO);
 const htx = exchangeFactory.getExchange(ExchangeType.HTX);
 const mexc = exchangeFactory.getExchange(ExchangeType.MEXC);
+const bitget = exchangeFactory.getExchange(ExchangeType.BITGET);
 
-const exchanges = [mexc, binance, htx, gateio, okx, bybit, kucoin];
+const exchanges = [mexc, binance, htx, gateio, okx, bybit, kucoin, bitget];
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = getEnv("telegramGroupId");

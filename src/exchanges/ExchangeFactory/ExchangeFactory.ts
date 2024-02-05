@@ -10,12 +10,13 @@ import { HTX } from "../HTX/HTX.js";
 import { Kucoin } from "../Kucoin/Kucoin.js";
 import { OKX } from "../OKX/OKX.js";
 import { MEXC } from "../MEXC/MEXC.js";
+import { BitGet } from "../BitGet/BitGet.js";
 
 export class ExchangeFactory {
   constructor(private readonly arbitrageConfig: ArbitrageConfig) {}
 
   getExchange(type: ExchangeType): Exchange {
-    const { rateLimits } = this.arbitrageConfig;
+    const { rateLimits, timeout } = this.arbitrageConfig;
 
     switch (type) {
       case ExchangeType.BINANCE: {
@@ -24,6 +25,7 @@ export class ExchangeFactory {
           secret: ENV.binanceApiSecret,
         });
         ccxtBinance.rateLimit = rateLimits.binance ?? ccxtBinance.rateLimit;
+        ccxtBinance.timeout = timeout;
 
         return new Binance(ccxtBinance);
       }
@@ -33,6 +35,7 @@ export class ExchangeFactory {
           secret: ENV.bybitApiSecret,
         });
         ccxtBybit.rateLimit = rateLimits.bybit ?? ccxtBybit.rateLimit;
+        ccxtBybit.timeout = timeout;
 
         return new Bybit(ccxtBybit);
       }
@@ -42,6 +45,7 @@ export class ExchangeFactory {
           secret: ENV.gateioApiSecret,
         });
         ccxtGateio.rateLimit = rateLimits.gateio ?? ccxtGateio.rateLimit;
+        ccxtGateio.timeout = timeout;
 
         return new GateIO(ccxtGateio);
       }
@@ -51,6 +55,7 @@ export class ExchangeFactory {
           secret: ENV.htxApiSecret,
         });
         ccxtHtx.rateLimit = rateLimits.htx ?? ccxtHtx.rateLimit;
+        ccxtHtx.timeout = timeout;
 
         return new HTX(ccxtHtx);
       }
@@ -61,6 +66,7 @@ export class ExchangeFactory {
           password: ENV.kucoinApiPassword,
         });
         ccxtKucoin.rateLimit = rateLimits.kucoin ?? ccxtKucoin.rateLimit;
+        ccxtKucoin.timeout = timeout;
 
         return new Kucoin(ccxtKucoin);
       }
@@ -71,6 +77,7 @@ export class ExchangeFactory {
           password: ENV.okxApiPassword,
         });
         ccxtOkx.rateLimit = rateLimits.okx ?? ccxtOkx.rateLimit;
+        ccxtOkx.timeout = timeout;
 
         return new OKX(ccxtOkx);
       }
@@ -80,8 +87,20 @@ export class ExchangeFactory {
           secret: ENV.mexcApiSecret,
         });
         ccxtMexc.rateLimit = rateLimits.mexc ?? ccxtMexc.rateLimit;
+        ccxtMexc.timeout = timeout;
 
         return new MEXC(ccxtMexc);
+      }
+      case ExchangeType.BITGET: {
+        const ccxtBitget = new ccxt.bitget({
+          apiKey: ENV.bitgetApiKey,
+          secret: ENV.bitgetApiSecret,
+          password: ENV.bitgetApiPassword,
+        });
+        ccxtBitget.rateLimit = rateLimits.mexc ?? ccxtBitget.rateLimit;
+        ccxtBitget.timeout = timeout;
+
+        return new BitGet(ccxtBitget);
       }
     }
   }

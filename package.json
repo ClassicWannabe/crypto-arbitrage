@@ -19,12 +19,15 @@
     "destroy": "npx cdk destroy"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.506.0",
+    "@aws-sdk/lib-dynamodb": "^3.506.0",
     "@prisma/client": "^5.8.1",
     "aws-cdk-lib": "^2.121.1",
     "ccxt": "^4.2.10",
     "constructs": "^10.3.0",
     "deepmerge-ts": "^5.1.0",
     "dotenv": "^16.3.1",
+    "electrodb": "^2.13.1",
     "forever": "^4.0.3",
     "forever-monitor": "^3.0.3",
     "lodash-es": "^4.17.21",
