@@ -61,7 +61,10 @@ export type CurrencyAmount = {
 export type StatusStep = {
   event: ExchangeEvent.STATUS;
   coin: CurrencyAmount;
-  profitPercent: number;
+  profit: {
+    percent: number;
+    amount: number;
+  };
 };
 
 export type TradeStep = {

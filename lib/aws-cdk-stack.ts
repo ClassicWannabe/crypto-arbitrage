@@ -45,11 +45,6 @@ export class CryptoArbitrageStack extends cdk.Stack {
       vpc: defaultvpc,
       allowAllOutbound: true,
     });
-    securityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(22),
-      "SSH from anywhere"
-    );
 
     const instance = new ec2.Instance(this, "arbitrage-bot", {
       vpc: defaultvpc,

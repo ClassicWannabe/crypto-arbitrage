@@ -88,6 +88,10 @@ export class ArbitrageStepsCalculator {
       lastTradeEndAmount,
       depositExchangeTradeFee
     );
+    const profitOrLoss = this.getProfitOrLoss(
+      firstTradeStartAmount,
+      finalAmount
+    );
 
     const steps: ArbitrageSteps = [
       {
@@ -150,10 +154,7 @@ export class ArbitrageStepsCalculator {
       {
         event: ExchangeEvent.STATUS,
         coin: { amount: finalAmount, currencyCode: quoteCurrencyCode },
-        profitPercent: this.getProfitOrLossPercent(
-          firstTradeStartAmount,
-          finalAmount
-        ),
+        profit: profitOrLoss,
       },
     ];
 
@@ -218,6 +219,10 @@ export class ArbitrageStepsCalculator {
       lastTradeEndAmount,
       depositExchangeTradeFee
     );
+    const profitOrLoss = this.getProfitOrLoss(
+      firstTradeStartAmount,
+      finalAmount
+    );
 
     const steps: ArbitrageSteps = [
       {
@@ -280,10 +285,7 @@ export class ArbitrageStepsCalculator {
       {
         event: ExchangeEvent.STATUS,
         coin: { amount: finalAmount, currencyCode: baseCurrencyCode },
-        profitPercent: this.getProfitOrLossPercent(
-          firstTradeStartAmount,
-          finalAmount
-        ),
+        profit: profitOrLoss,
       },
     ];
 
@@ -295,13 +297,15 @@ export class ArbitrageStepsCalculator {
   }
 
   private isArbitrageFeasible(startAmount: number, endAmount: number) {
-    return (
-      this.getProfitOrLossPercent(startAmount, endAmount) >=
-      this.params.minProfitPercent
-    );
+    const profitOrLoss = this.getProfitOrLoss(startAmount, endAmount);
+
+    return profitOrLoss.percent >= this.params.minProfitPercent;
   }
 
-  private getProfitOrLossPercent(startAmount: number, endAmount: number) {
-    return ((endAmount - startAmount) * 100) / startAmount;
+  private getProfitOrLoss(startAmount: number, endAmount: number) {
+    const profitOrLoss = endAmount - startAmount;
+    const profitOrLossPercent = (profitOrLoss * 100) / startAmount;
+
+    return { amount: profitOrLoss, percent: profitOrLossPercent };
   }
 }

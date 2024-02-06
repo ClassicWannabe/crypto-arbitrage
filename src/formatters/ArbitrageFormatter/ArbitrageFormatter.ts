@@ -193,10 +193,19 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatStatusStep(step: StatusStep) {
-    return `Итого: ${this.formatCoin(step.coin)}. Прибыль: ${this.formatNumber(
-      step.profitPercent,
+    const { coin, profit } = step;
+    const profitString = this.formatProfit(step);
+
+    return `Итого: ${this.formatCoin(coin)}.\n${profitString}\n\n`;
+  }
+
+  private formatProfit(step: StatusStep) {
+    const { coin, profit } = step;
+
+    return `Прибыль: ${this.formatCoin({ amount: profit.amount, currencyCode: coin.currencyCode })} ~${this.formatNumber(
+      profit.percent,
       3
-    )}%\n\n`;
+    )}%`;
   }
 
   private formatCoin(coin: CurrencyAmount) {
