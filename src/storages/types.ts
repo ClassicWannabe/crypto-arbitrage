@@ -28,3 +28,30 @@ export type TradeArbitrageStepDetails = z.infer<
 export type WithdrawArbitrageStepDetails = z.infer<
   typeof withdrawArbitrageStepDetails
 >;
+
+export enum ArbitrageDataStatus {
+  UNCONFIRMED = "UNCONFIRMED",
+  PROCESSED = "PROCESSED",
+  PROCESSING = "PROCESSING",
+  UNTOUCHED = "UNTOUCHED",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED",
+}
+export enum ArbitrageStepType {
+  TRADE = "TRADE",
+  WITHDRAW = "WITHDRAW",
+}
+export enum ArbitrageStepStatus {
+  PROCESSED = "PROCESSED",
+  PROCESSING = "PROCESSING",
+  UNTOUCHED = "UNTOUCHED",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED",
+}
+export enum EntityType {
+  ARBITRAGE_DATA = "ARBITRAGE_DATA",
+  TRADE_STEP = "TRADE_STEP",
+  WITHDRAW_STEP = "WITHDRAW_STEP",
+}
