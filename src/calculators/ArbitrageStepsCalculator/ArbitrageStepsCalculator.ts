@@ -107,6 +107,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: baseCurrencyCode,
         },
         price: firstTradePrice,
+        fee: withdrawExchangeTradeFee,
         orderBook: withdrawExchangeOrderBook,
         dayChangePercentage: withdrawExchangeTicker.percentage,
         isActive: withdrawExchangeMarketData.active,
@@ -127,10 +128,15 @@ export class ArbitrageStepsCalculator {
             isWithdrawable: depositNetwork.withdraw,
           },
         },
+        exchanges: {
+          withdrawExchangeId: withdrawExchange.id,
+          depositExchangeId: depositExchange.id,
+        },
         coin: {
           amount: withdrawAmount,
           currencyCode: withdrawCurrencyCode,
         },
+        fee: withdrawFee,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
       {
@@ -146,6 +152,7 @@ export class ArbitrageStepsCalculator {
           currencyCode: quoteCurrencyCode,
         },
         price: lastTradePrice,
+        fee: depositExchangeTradeFee,
         orderBook: depositExchangeOrderBook,
         dayChangePercentage: depositExchangeTicker.percentage,
         isActive: depositExchangeMarketData.active,
@@ -239,6 +246,7 @@ export class ArbitrageStepsCalculator {
         },
         price: firstTradePrice,
         orderBook: withdrawExchangeOrderBook,
+        fee: withdrawExchangeTradeFee,
         dayChangePercentage: withdrawExchangeTicker.percentage,
         isActive: withdrawExchangeMarketData.active,
       },
@@ -258,10 +266,15 @@ export class ArbitrageStepsCalculator {
             isWithdrawable: depositNetwork.withdraw,
           },
         },
+        exchanges: {
+          withdrawExchangeId: withdrawExchange.id,
+          depositExchangeId: depositExchange.id,
+        },
         coin: {
           amount: withdrawAmount,
           currencyCode: quoteCurrencyCode,
         },
+        fee: withdrawFee,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
       {
@@ -278,6 +291,7 @@ export class ArbitrageStepsCalculator {
         },
         price: lastTradePrice,
         orderBook: depositExchangeOrderBook,
+        fee: depositExchangeTradeFee,
         dayChangePercentage: depositExchangeTicker.percentage,
         isActive: depositExchangeMarketData.active,
       },

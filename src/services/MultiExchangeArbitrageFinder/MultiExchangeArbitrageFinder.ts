@@ -8,6 +8,7 @@ import { Service } from "../types.js";
 import { ArbitrageData } from "../../types.js";
 import { logger } from "../../logger/logger.js";
 import { sleep } from "../../helpers.js";
+import { ArbitrageRepo } from "../../storages/ArbitrageRepo/ArbitrageRepo.js";
 
 export class MultiExchangeArbitrageFinder implements Service {
   private exchangesLastReloadDate = new Date();
@@ -17,6 +18,7 @@ export class MultiExchangeArbitrageFinder implements Service {
     private readonly calculator: MultiExchangeCalculator,
     private readonly formatter: Formatter,
     private readonly publisher: Publisher,
+    private readonly arbitrageRepo: ArbitrageRepo,
     private readonly storage: Storage,
     private readonly symbolsChunkSize: number,
     private readonly ignoredSymbols: string[]
@@ -48,7 +50,8 @@ export class MultiExchangeArbitrageFinder implements Service {
         logger.info("Found potential arbitrage offers", { arbitrages });
       }
 
-      this.publishData(arbitrages);
+      await this.saveData(arbitrages);
+      await this.publishData(arbitrages);
       this.symbolPointer = iteration * this.symbolsChunkSize;
       iteration++;
     }
@@ -72,6 +75,12 @@ export class MultiExchangeArbitrageFinder implements Service {
     );
 
     return dataArray.flat();
+  }
+
+  private async saveData(arbitrages: ArbitrageData[]) {
+    for (const arbitrage of arbitrages) {
+      await this.arbitrageRepo.saveArbitrage(arbitrage);
+    }
   }
 
   private async publishData(arbitrages: ArbitrageData[]) {

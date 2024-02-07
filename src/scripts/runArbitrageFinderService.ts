@@ -11,6 +11,7 @@ import { MultiExchangeArbitrageFinder } from "../services/MultiExchangeArbitrage
 import { ArbitrageFormatter } from "../formatters/ArbitrageFormatter/ArbitrageFormatter.js";
 import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js";
 import { ExchangeType } from "../exchanges/types.js";
+import { ArbitrageRepo } from "../storages/ArbitrageRepo/ArbitrageRepo.js";
 
 const storage = new FileStorage();
 const arbitrageConfig = await storage.getArbitrageConfig();
@@ -40,10 +41,12 @@ const mutliExchangeCalculator = new MultiExchangeCalculator(
   arbitrageConfig.minProfitPercent,
   arbitrageConfig.targetCoins
 );
+const arbitrageRepo = new ArbitrageRepo();
 const multiExchangeArbitrageService = new MultiExchangeArbitrageFinder(
   mutliExchangeCalculator,
   formatter,
   publisher,
+  arbitrageRepo,
   storage,
   arbitrageConfig.parallelProcessSymbolNumber,
   arbitrageConfig.ignoredSymbols

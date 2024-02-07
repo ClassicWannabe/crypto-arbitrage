@@ -4,68 +4,118 @@ import {
   Prisma,
   ArbitrageStatus,
 } from "@prisma/client";
+import { randomUUID } from "crypto";
+import { CreateEntityItem } from "electrodb";
 
-import {
-  TradeArbitrageStepDetails,
-  WithdrawArbitrageStepDetails,
-} from "../types.js";
 import {
   tradeArbitrageStepDetails,
   withdrawArbitrageStepDetails,
 } from "../schema.js";
 import { ProcessableArbitrage, ProcessableArbitrageStatus } from "./types.js";
+import { ArbitrageData, ExchangeEvent } from "../../types.js";
+import { TradeStepEntity } from "../ddb/entities/TradeStepEntity.js";
+import { WithdrawStepEntity } from "../ddb/entities/WithdrawStepEntity.js";
+import { getTable } from "../ddb/helpers.js";
+import { ArbitrageDataStatus } from "../types.js";
+
+type TradeStepCreateInput = CreateEntityItem<typeof TradeStepEntity>;
+
+type WithdrawStepCreateInput = CreateEntityItem<typeof WithdrawStepEntity>;
 
 export class ArbitrageRepo {
-  constructor(private readonly client: PrismaClient) {}
+  private readonly table = getTable();
+  constructor() {}
 
   async getArbitrages(): Promise<ProcessableArbitrage[]> {
-    const statusIn: ProcessableArbitrageStatus[] = [
-      ArbitrageStatus.UNTOUCHED,
-      ArbitrageStatus.PROCESSING,
-    ];
-    const arbitrageDataCollection = await this.client.arbitrageData.findMany({
-      where: { status: { in: statusIn } },
-      include: {
-        arbitrageSteps: {
-          orderBy: {
-            order: "asc",
-          },
-        },
-      },
-    });
+    const arbitrages = await this.table.entities.arbitrageData.scan
+      .where(
+        ({ status }, { eq }) =>
+          `${eq(status, ArbitrageDataStatus.UNTOUCHED)} OR ${eq(status, ArbitrageDataStatus.PROCESSING)}`
+      )
+      .go({ pages: "all" });
 
-    return arbitrageDataCollection.map((data) => {
-      return {
-        ...data,
-        arbitrageSteps: data.arbitrageSteps.map((step) => ({
-          ...step,
-          details: this.parseStepDetails(step.type, step.details),
-        })),
-      };
-    }) as ProcessableArbitrage[];
+    return (await Promise.all(
+      arbitrages.data.map(async (arbitrage) => {
+        return await this.table.collections
+          .arbitrages({ arbitrageDataId: arbitrage.arbitrageDataId })
+          .go();
+      })
+    )) as unknown as ProcessableArbitrage[];
   }
 
-  async saveArbitrage(
-    arbitrageData: Prisma.ArbitrageDataCreateInput,
-    steps: (Omit<
-      Prisma.ArbitrageStepCreateManyInput,
-      "arbitrageDataId" | "order" | "details"
-    > & { details: TradeArbitrageStepDetails | WithdrawArbitrageStepDetails })[]
-  ) {
-    steps.forEach((step) => {
-      this.parseStepDetails(step.type, step.details);
-    });
+  async saveArbitrage(arbitrage: ArbitrageData) {
+    const { baseCurrencyCode, quoteCurrencyCode, steps, symbol } = arbitrage;
+    const arbitrageData = await this.table.entities.arbitrageData
+      .create({
+        market: { baseCurrencyCode, quoteCurrencyCode, symbol },
+      })
+      .go();
+    const arbitrageDataId = arbitrageData.data.arbitrageDataId;
 
-    const savedArbitrageData = await this.client.arbitrageData.create({
-      data: arbitrageData,
-    });
+    const tradeStepCreateInputs = this.getTradeStepCreateInputs(
+      steps,
+      arbitrageDataId
+    );
+    const withdrawStepCreateInputs = this.getWithdrawStepCreateInputs(
+      steps,
+      arbitrageDataId
+    );
 
-    const stepsInput = steps.map((step, index) => ({
-      arbitrageDataId: savedArbitrageData.id,
-      order: index + 1,
-      ...step,
-    }));
-    await this.client.arbitrageStep.createMany({ data: stepsInput });
+    await Promise.all([
+      this.table.entities.arbitrageData
+        .create({
+          market: { baseCurrencyCode, quoteCurrencyCode, symbol },
+          arbitrageDataId,
+        })
+        .go(),
+      this.table.entities.tradeStep.put(tradeStepCreateInputs).go(),
+      this.table.entities.withdrawStep.put(withdrawStepCreateInputs).go(),
+    ]);
+  }
+
+  private getTradeStepCreateInputs(
+    steps: ArbitrageData["steps"],
+    arbitrageDataId: string
+  ): TradeStepCreateInput[] {
+    return steps.reduce<TradeStepCreateInput[]>((acc, step, index) => {
+      if (step.event !== ExchangeEvent.TRADE) {
+        return acc;
+      }
+      acc.push({
+        stepOrder: index + 1,
+        amount: step.startCoin.amount,
+        arbitrageDataId,
+        tradeOperation: step.operation,
+        exchangeId: step.exchangeId,
+        price: step.price,
+        fee: step.fee,
+      });
+      return acc;
+    }, []);
+  }
+
+  private getWithdrawStepCreateInputs(
+    steps: ArbitrageData["steps"],
+    arbitrageDataId: string
+  ): WithdrawStepCreateInput[] {
+    return steps.reduce<WithdrawStepCreateInput[]>((acc, step, index) => {
+      if (step.event !== ExchangeEvent.WITHDRAW) {
+        return acc;
+      }
+      acc.push({
+        stepOrder: index + 1,
+        arbitrageDataId,
+        networkId: step.network.name,
+        exchanges: {
+          deposit: { id: step.exchanges.depositExchangeId },
+          withdraw: { id: step.exchanges.withdrawExchangeId },
+        },
+        fee: step.fee,
+        amount: step.coin.amount,
+        currencyCode: step.coin.currencyCode,
+      });
+      return acc;
+    }, []);
   }
 
   private parseStepDetails(type: ArbitrageStepType, details: unknown) {
@@ -81,28 +131,15 @@ export class ArbitrageRepo {
     throw new Error("Uknown step type:" + type);
   }
 
-  async expireArbitrages(ids: string[]) {
-    await this.client.arbitrageData.updateMany({
-      data: { status: ArbitrageStatus.EXPIRED },
-      where: {
-        id: { in: ids },
-      },
-    });
-  }
+  async expireArbitrages(ids: string[]) {}
 
-  async updateArbitrageStep(id: string, data: Prisma.ArbitrageStepUpdateInput) {
-    const step = await this.client.arbitrageStep.update({
-      data,
-      where: { id },
-    });
+  async updateArbitrageStep(
+    id: string,
+    data: Prisma.ArbitrageStepUpdateInput
+  ) {}
 
-    return { ...step, details: this.parseStepDetails(step.type, step.details) };
-  }
-
-  async updateArbitrageData(id: string, data: Prisma.ArbitrageDataUpdateInput) {
-    return await this.client.arbitrageData.update({
-      data,
-      where: { id },
-    });
-  }
+  async updateArbitrageData(
+    id: string,
+    data: Prisma.ArbitrageDataUpdateInput
+  ) {}
 }

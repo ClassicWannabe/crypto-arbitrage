@@ -75,6 +75,7 @@ export type TradeStep = {
   orderBook: OrderBook;
   price: number;
   exchangeId: string;
+  fee: Fee;
   dayChangePercentage?: number | null;
   isActive?: boolean;
 };
@@ -96,7 +97,12 @@ export type WithdrawStep = {
     withdrawNetwork: WithdrawStepNetworkDetails;
     depositNetwork: WithdrawStepNetworkDetails;
   };
+  exchanges: {
+    withdrawExchangeId: string;
+    depositExchangeId: string;
+  },
   coin: CurrencyAmount;
+  fee: Fee;
 };
 
 export type ArbitrageSteps = [

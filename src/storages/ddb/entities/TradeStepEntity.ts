@@ -1,21 +1,24 @@
 import { Entity } from "electrodb";
 import { randomUUID } from "crypto";
 
-import { TABLE_NAME } from "../consts.js";
 import { EntityType } from "../../types.js";
 import { ArbitrageStepStatus } from "../../types.js";
+import { FeeType, TradeOperation } from "../../../types.js";
+import { DDB_TABLE_NAME } from "../../../consts.js";
+import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 
-export const WithdrawStep = new Entity({
+export const TradeStepEntity = new Entity({
   model: {
-    entity: EntityType.WITHDRAW_STEP,
+    entity: EntityType.TRADE_STEP,
     version: "1",
-    service: TABLE_NAME,
+    service: DDB_TABLE_NAME,
   },
   attributes: {
-    id: {
+    tradeStepId: {
       type: "string",
       required: true,
       readOnly: true,
+      default: () => randomUUID(),
       set: () => randomUUID(),
     },
     arbitrageDataId: {
@@ -28,13 +31,18 @@ export const WithdrawStep = new Entity({
       default: ArbitrageStepStatus.UNTOUCHED,
       required: true,
     },
-    networkId: {
+    tradeOperation: {
+      type: Object.values(TradeOperation),
+      readOnly: true,
+      required: true,
+    },
+    exchangeId: {
       type: "string",
       readOnly: true,
       required: true,
     },
-    currencyCode: {
-      type: "string",
+    price: {
+      type: "number",
       readOnly: true,
       required: true,
     },
@@ -48,43 +56,21 @@ export const WithdrawStep = new Entity({
       required: true,
       readOnly: true,
     },
-    transactionId: {
+    marketOrderId: {
       type: "string",
     },
-    exchanges: {
+    fee: {
       type: "map",
       required: true,
       readOnly: true,
       properties: {
-        withdraw: {
-          type: "map",
+        value: {
+          type: "number",
           required: true,
-          readOnly: true,
-          properties: {
-            id: {
-              type: "string",
-              required: true,
-              readOnly: true,
-            },
-            address: {
-              type: "string",
-            },
-          },
         },
-        deposit: {
-          type: "map",
+        type: {
+          type: Object.values(FeeType),
           required: true,
-          readOnly: true,
-          properties: {
-            id: {
-              type: "string",
-              required: true,
-              readOnly: true,
-            },
-            address: {
-              type: "string",
-            },
-          },
         },
       },
     },
@@ -104,14 +90,27 @@ export const WithdrawStep = new Entity({
     },
   },
   indexes: {
-    step: {
+    // step: {
+    //   pk: {
+    //     field: PARTITION_KEY_NAME,
+    //     composite: ["arbitrageDataId"],
+    //   },
+    //   sk: {
+    //     field: SORT_KEY_NAME,
+    //     composite: ["id"],
+    //   },
+    // },
+    tradeSteps: {
+      collection: "arbitrages",
       pk: {
-        field: "pk",
+        field: PARTITION_KEY_NAME,
         composite: ["arbitrageDataId"],
+        template: "arbitrageData|${arbitrageDataId}",
       },
       sk: {
-        field: "sk",
-        composite: ["id"],
+        field: SORT_KEY_NAME,
+        composite: ["tradeStepId"],
+        template: "tradeStep|${tradeStepId}",
       },
     },
   },

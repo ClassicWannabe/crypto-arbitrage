@@ -24,3 +24,7 @@ export const ENV = {
   telegramGroupId: process.env.TELEGRAM_GROUP_ID,
   telegramDeveloperId: process.env.TELEGRAM_DEVELOPER_ID,
 } as const;
+
+export const DDB_TABLE_NAME = "crypto-arbitrage";
+
+export const DDB_LOCAL_ENDPOINT = "http://localhost:8000";

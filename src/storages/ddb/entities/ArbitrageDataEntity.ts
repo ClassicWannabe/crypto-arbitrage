@@ -1,22 +1,24 @@
 import { Entity } from "electrodb";
 import { randomUUID } from "crypto";
 
-import { TABLE_NAME } from "../consts.js";
 import { EntityType } from "../../types.js";
 import { ArbitrageDataStatus } from "../../types.js";
 import { getConfirmationCode } from "../helpers.js";
+import { DDB_TABLE_NAME } from "../../../consts.js";
+import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 
-export const ArbitrageData = new Entity({
+export const ArbitrageDataEntity = new Entity({
   model: {
     entity: EntityType.ARBITRAGE_DATA,
     version: "1",
-    service: TABLE_NAME,
+    service: DDB_TABLE_NAME,
   },
   attributes: {
-    id: {
+    arbitrageDataId: {
       type: "string",
       required: true,
       readOnly: true,
+      default: () => randomUUID(),
       set: () => randomUUID(),
     },
     status: {
@@ -45,8 +47,9 @@ export const ArbitrageData = new Entity({
     },
     confirmationCode: {
       type: "string",
-      readOnly: true,
       required: true,
+      readOnly: true,
+      default: () => getConfirmationCode(),
       set: () => getConfirmationCode(),
     },
     createdAt: {
@@ -65,14 +68,27 @@ export const ArbitrageData = new Entity({
     },
   },
   indexes: {
-    arbitrage: {
+    // arbitrageData: {
+    //   pk: {
+    //     field: PARTITION_KEY_NAME,
+    //     composite: ["id"],
+    //   },
+    //   sk: {
+    //     field: SORT_KEY_NAME,
+    //     composite: ["id"],
+    //   },
+    // },
+    arbitrages: {
+      collection: "arbitrages",
       pk: {
-        field: "pk",
-        composite: ["id"],
+        field: PARTITION_KEY_NAME,
+        composite: ["arbitrageDataId"],
+        template: "arbitrageData|${arbitrageDataId}",
       },
       sk: {
-        field: "sk",
-        composite: ["id"],
+        field: SORT_KEY_NAME,
+        composite: ["arbitrageDataId"],
+        template: "arbitrageData|${arbitrageDataId}",
       },
     },
   },

@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
 
@@ -65,5 +66,16 @@ export class CryptoArbitrageStack extends cdk.Stack {
     const userDataScript = readFileSync("./lib/user-data.sh", "utf8");
 
     instance.addUserData(userDataScript);
+
+    new dynamodb.Table(this, "crypto-arbitrage-ddb-table", {
+      partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 25,
+      writeCapacity: 25,
+      tableName: "crypto-arbitrage",
+      timeToLiveAttribute: "ttl",
+      deletionProtection: true,
+    });
   }
 }

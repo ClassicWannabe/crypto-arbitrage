@@ -75,7 +75,9 @@ export class MultiExchangeArbitrageProcessor implements Service {
           break;
         }
         case ArbitrageStepType.WITHDRAW: {
-          updatedStep = await this.processWithdrawArbitrageStep(step);
+          updatedStep = (await this.processWithdrawArbitrageStep(
+            step
+          )) as unknown as ArbitrageStep;
           break;
         }
       }
@@ -103,7 +105,10 @@ export class MultiExchangeArbitrageProcessor implements Service {
     }
 
     if (tradeStep.status === ArbitrageStatus.UNTOUCHED) {
-      return await this.handleUntouchedTradeArbitrageStep(tradeStep, arbitrage);
+      return (await this.handleUntouchedTradeArbitrageStep(
+        tradeStep,
+        arbitrage
+      )) as unknown as ArbitrageStep;
     }
 
     throw new Error("Cannot process trade step:" + tradeStep.id);
@@ -125,15 +130,15 @@ export class MultiExchangeArbitrageProcessor implements Service {
       return tradeStep;
     }
     if (order.status === OrderStatus.CLOSED) {
-      return await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
+      return (await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
         status: ArbitrageStatus.PROCESSED,
-      });
+      })) as unknown as ArbitrageStep;
     }
 
-    return await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
+    return (await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
       status: ArbitrageStatus.FAILED,
       arbitrageData: { update: { status: ArbitrageStatus.FAILED } },
-    });
+    })) as unknown as ArbitrageStep;
   }
 
   private async handleUntouchedTradeArbitrageStep(
