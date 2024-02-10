@@ -54,12 +54,6 @@ export class ArbitrageRepo {
     );
 
     await Promise.all([
-      this.table.entities.arbitrageData
-        .create({
-          market: { baseCurrencyCode, quoteCurrencyCode, symbol },
-          arbitrageDataId,
-        })
-        .go(),
       this.table.entities.tradeStep.put(tradeStepCreateInputs).go(),
       this.table.entities.withdrawStep.put(withdrawStepCreateInputs).go(),
     ]);

@@ -23,6 +23,7 @@ export const ENV = {
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   telegramGroupId: process.env.TELEGRAM_GROUP_ID,
   telegramDeveloperId: process.env.TELEGRAM_DEVELOPER_ID,
+  awsRegion: process.env.AWS_REGION,
 } as const;
 
 export const DDB_TABLE_NAME = "crypto-arbitrage";

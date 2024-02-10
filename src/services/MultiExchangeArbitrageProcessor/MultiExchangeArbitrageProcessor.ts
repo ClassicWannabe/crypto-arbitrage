@@ -48,14 +48,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
     }
 
     const tradeSteps = arbitrage.tradeStep;
-    if (!tradeSteps.length) {
-      throw new Error("Missing Trade Steps");
-    }
-
     const withdrawSteps = arbitrage.withdrawStep;
-    if (!withdrawSteps.length) {
-      throw new Error("Missing Withdraw Steps");
-    }
 
     const steps = [...tradeSteps, ...withdrawSteps];
     steps.sort((a, b) => a.stepOrder - b.stepOrder);
@@ -86,7 +79,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
   private isProcessableArbitrage(
     arbitrage: Arbitrage
   ): arbitrage is ProcessableArbitrage {
-    return !this.isExpiredArbitrage(arbitrage);
+    return !this.isExpiredArbitrage(arbitrage) && arbitrage.steps.length > 0;
   }
 
   private isExpiredArbitrage(arbitrage: Arbitrage) {

@@ -6,6 +6,8 @@ import { ArbitrageDataEntity } from "./entities/ArbitrageDataEntity.js";
 import { TradeStepEntity } from "./entities/TradeStepEntity.js";
 import { WithdrawStepEntity } from "./entities/WithdrawStepEntity.js";
 import { ArbitrageService } from "./types.js";
+import { getEnv } from "../../helpers.js";
+import { NODE_ENV } from "../../types.js";
 
 export class DdbTableSingleton {
   private static table: ArbitrageService;
@@ -16,9 +18,15 @@ export class DdbTableSingleton {
     if (this.table) {
       return this.table;
     }
+    const nodeEnv = getEnv("node");
+    let endpoint: string | undefined;
+    if (nodeEnv === NODE_ENV.DEV) {
+      endpoint = DDB_LOCAL_ENDPOINT;
+    }
 
     const client = new DynamoDBClient({
-      endpoint: DDB_LOCAL_ENDPOINT,
+      region: getEnv("awsRegion"),
+      endpoint,
     });
 
     this.table = new Service(
