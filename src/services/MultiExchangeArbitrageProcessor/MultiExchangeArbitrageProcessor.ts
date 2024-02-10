@@ -1,20 +1,28 @@
-import {
-  ArbitrageData,
-  ArbitrageStepType,
-  ArbitrageStatus,
-  ArbitrageStep,
-} from "@prisma/client";
-
 import { ArbitrageRepo } from "../../storages/ArbitrageRepo/ArbitrageRepo.js";
 import { Service } from "../types.js";
 import { Address, Exchange, Order } from "../../exchanges/types.js";
-import {
-  ProcessableArbitrage,
-  TradeArbitrageStep,
-  WithdrawArbitrageStep,
-} from "../../storages/ArbitrageRepo/types.js";
 import { OrderStatus, TradeOperation } from "../../types.js";
 import { logger } from "../../logger/logger.js";
+import {
+  ArbitrageCollection,
+  ArbitrageData,
+  ArbitrageStep,
+  TradeArbitrageStep,
+  WithdrawArbitrageStep,
+} from "../../storages/ddb/types.js";
+import {
+  ArbitrageDataStatus,
+  ArbitrageStepStatus,
+  ArbitrageStepType,
+} from "../../storages/types.js";
+
+type Arbitrage = ArbitrageData & {
+  steps: ArbitrageStep[];
+};
+
+type ProcessableArbitrage = Arbitrage & {
+  status: Extract<ArbitrageDataStatus, "UNTOUCHED" | "PROCESSING">;
+};
 
 export class MultiExchangeArbitrageProcessor implements Service {
   constructor(
@@ -24,41 +32,71 @@ export class MultiExchangeArbitrageProcessor implements Service {
 
   async process(): Promise<void> {
     const arbitrages = await this.arbitrageRepo.getArbitrages();
-    const validArbitrages = this.filterArbitrages(arbitrages);
-    await this.expireArbitrages(arbitrages);
+    const formattedArbitrages = arbitrages.map(this.formatArbitrage);
+    const validArbitrages = this.filterArbitrages(formattedArbitrages);
+    await this.expireArbitrages(formattedArbitrages);
 
     for (const arbitrage of validArbitrages) {
       this.processArbitrage(arbitrage);
     }
   }
 
-  private filterArbitrages(
-    arbitrages: ArbitrageData[]
-  ): ProcessableArbitrage[] {
+  private formatArbitrage(arbitrage: ArbitrageCollection): Arbitrage {
+    const [arbitrageData] = arbitrage.arbitrageData;
+    if (!arbitrageData) {
+      throw new Error("Missing Arbitrage Data");
+    }
+
+    const tradeSteps = arbitrage.tradeStep;
+    if (!tradeSteps.length) {
+      throw new Error("Missing Trade Steps");
+    }
+
+    const withdrawSteps = arbitrage.withdrawStep;
+    if (!withdrawSteps.length) {
+      throw new Error("Missing Withdraw Steps");
+    }
+
+    const steps = [...tradeSteps, ...withdrawSteps];
+    steps.sort((a, b) => a.stepOrder - b.stepOrder);
+
+    return {
+      ...arbitrageData,
+      steps,
+    };
+  }
+
+  private filterArbitrages(arbitrages: Arbitrage[]): ProcessableArbitrage[] {
     return arbitrages.filter(this.isProcessableArbitrage);
   }
 
-  private async expireArbitrages(arbitrages: ArbitrageData[]) {
+  private async expireArbitrages(arbitrages: Arbitrage[]) {
     const expiredArbitrages = arbitrages.filter(this.isExpiredArbitrage);
-    const expireArbitrageIds = expiredArbitrages.map(({ id }) => id);
 
-    await this.arbitrageRepo.expireArbitrages(expireArbitrageIds);
+    await Promise.all(
+      expiredArbitrages.map(async ({ arbitrageDataId }) => {
+        await this.arbitrageRepo.updateArbitrageData(
+          { arbitrageDataId },
+          { status: ArbitrageDataStatus.EXPIRED }
+        );
+      })
+    );
   }
 
   private isProcessableArbitrage(
-    arbitrage: ArbitrageData
+    arbitrage: Arbitrage
   ): arbitrage is ProcessableArbitrage {
-    return !this.isExpiredArbitrage(arbitrage) && arbitrage.isConfirmed;
+    return !this.isExpiredArbitrage(arbitrage);
   }
 
-  private isExpiredArbitrage(arbitrage: ArbitrageData) {
+  private isExpiredArbitrage(arbitrage: Arbitrage) {
     const tenMinutes = 10;
     const thrityMinutes = 30;
     const now = Date.now();
-    const createdAt = arbitrage.createdAt.getTime();
+    const createdAt = new Date(arbitrage.createdAt).getTime();
     const passedTimeInMinutesSinceCreation = (now - createdAt) / 1000 / 60;
 
-    if (arbitrage.status === ArbitrageStatus.PROCESSING) {
+    if (arbitrage.status === ArbitrageDataStatus.PROCESSING) {
       return passedTimeInMinutesSinceCreation > thrityMinutes;
     }
 
@@ -66,23 +104,41 @@ export class MultiExchangeArbitrageProcessor implements Service {
   }
 
   private async processArbitrage(arbitrage: ProcessableArbitrage) {
-    for (const step of arbitrage.arbitrageSteps) {
-      let updatedStep: ArbitrageStep;
+    for (const step of arbitrage.steps) {
+      let updatedStatus: ArbitrageStepStatus;
 
-      switch (step.type) {
+      switch (step.stepType) {
         case ArbitrageStepType.TRADE: {
-          updatedStep = await this.processTradeArbitrageStep(step, arbitrage);
+          updatedStatus = await this.processTradeArbitrageStep(step, arbitrage);
           break;
         }
         case ArbitrageStepType.WITHDRAW: {
-          updatedStep = (await this.processWithdrawArbitrageStep(
-            step
-          )) as unknown as ArbitrageStep;
+          updatedStatus = await this.processWithdrawArbitrageStep(step);
           break;
         }
       }
 
-      if (updatedStep.status === ArbitrageStatus.PROCESSING) {
+      if (updatedStatus === ArbitrageStepStatus.PROCESSING) {
+        await this.arbitrageRepo.updateArbitrageData(
+          { arbitrageDataId: arbitrage.arbitrageDataId },
+          { status: ArbitrageDataStatus.PROCESSING }
+        );
+        return;
+      }
+
+      if (updatedStatus === ArbitrageStepStatus.FAILED) {
+        await this.arbitrageRepo.updateArbitrageData(
+          { arbitrageDataId: arbitrage.arbitrageDataId },
+          { status: ArbitrageDataStatus.FAILED }
+        );
+        return;
+      }
+
+      if (updatedStatus === ArbitrageStepStatus.CANCELLED) {
+        await this.arbitrageRepo.updateArbitrageData(
+          { arbitrageDataId: arbitrage.arbitrageDataId },
+          { status: ArbitrageDataStatus.CANCELLED }
+        );
         return;
       }
     }
@@ -91,131 +147,153 @@ export class MultiExchangeArbitrageProcessor implements Service {
   private async processTradeArbitrageStep(
     tradeStep: TradeArbitrageStep,
     arbitrage: ProcessableArbitrage
-  ): Promise<ArbitrageStep> {
+  ): Promise<ArbitrageStepStatus> {
     this.checkArbitrageStepStatus(tradeStep.status);
-    if (tradeStep.status === ArbitrageStatus.PROCESSED) {
-      return tradeStep;
+    if (tradeStep.status === ArbitrageStepStatus.PROCESSED) {
+      return tradeStep.status;
     }
 
-    if (tradeStep.status === ArbitrageStatus.PROCESSING) {
+    if (tradeStep.status === ArbitrageStepStatus.PROCESSING) {
       return await this.handleProcessingTradeArbitrageStep(
         tradeStep,
         arbitrage
       );
     }
 
-    if (tradeStep.status === ArbitrageStatus.UNTOUCHED) {
-      return (await this.handleUntouchedTradeArbitrageStep(
-        tradeStep,
-        arbitrage
-      )) as unknown as ArbitrageStep;
+    if (tradeStep.status === ArbitrageStepStatus.UNTOUCHED) {
+      return await this.handleUntouchedTradeArbitrageStep(tradeStep, arbitrage);
     }
 
-    throw new Error("Cannot process trade step:" + tradeStep.id);
+    throw new Error("Cannot process trade step:" + tradeStep.tradeStepId);
   }
 
   private async handleProcessingTradeArbitrageStep(
     tradeStep: TradeArbitrageStep,
     arbitrage: ProcessableArbitrage
-  ): Promise<ArbitrageStep> {
-    const exchange = this.getExchange(tradeStep.details.exchange);
-    const orderId = tradeStep.details.orderId;
+  ): Promise<ArbitrageStepStatus> {
+    const exchange = this.getExchange(tradeStep.exchangeId);
+    const orderId = tradeStep.marketOrderId;
     if (!orderId) {
       throw new Error(
-        `Order ID is missing in details. ArbitrageData ID: ${arbitrage.id}. Arbitrage Step ID: ${tradeStep.id}`
+        `Order ID is missing in details. ArbitrageData ID: ${tradeStep.arbitrageDataId}. Arbitrage Step ID: ${tradeStep.tradeStepId}`
       );
     }
-    const order = await exchange.getOrder(orderId, arbitrage.symbol);
+    const order = await exchange.getOrder(orderId, arbitrage.market.symbol);
     if (order.status === OrderStatus.OPEN) {
-      return tradeStep;
+      return tradeStep.status;
     }
     if (order.status === OrderStatus.CLOSED) {
-      return (await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
-        status: ArbitrageStatus.PROCESSED,
-      })) as unknown as ArbitrageStep;
+      const newStatus = ArbitrageStepStatus.PROCESSED;
+      await this.arbitrageRepo.updateTradeStep(
+        {
+          arbitrageDataId: tradeStep.arbitrageDataId,
+          tradeStepId: tradeStep.tradeStepId,
+        },
+        {
+          status: newStatus,
+        }
+      );
+      return newStatus;
     }
 
-    return (await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
-      status: ArbitrageStatus.FAILED,
-      arbitrageData: { update: { status: ArbitrageStatus.FAILED } },
-    })) as unknown as ArbitrageStep;
+    const newStatus = ArbitrageStepStatus.FAILED;
+    await this.arbitrageRepo.updateTradeStep(
+      {
+        arbitrageDataId: tradeStep.arbitrageDataId,
+        tradeStepId: tradeStep.tradeStepId,
+      },
+      {
+        status: newStatus,
+      }
+    );
+    return newStatus;
   }
 
   private async handleUntouchedTradeArbitrageStep(
     tradeStep: TradeArbitrageStep,
     arbitrage: ProcessableArbitrage
-  ) {
-    const exchange = this.getExchange(tradeStep.details.exchange);
+  ): Promise<ArbitrageStepStatus> {
+    const exchange = this.getExchange(tradeStep.exchangeId);
     const balance = await exchange.getBalance();
     let order: Order;
-    if (tradeStep.details.operation === TradeOperation.BUY) {
-      const requiredBalance =
-        tradeStep.details.amount * tradeStep.details.price;
-      const quoteCurrencyBalance = balance.free[arbitrage.quoteCurrency] ?? 0;
+    if (tradeStep.tradeOperation === TradeOperation.BUY) {
+      const requiredBalance = tradeStep.amount * tradeStep.price;
+      const quoteCurrencyBalance =
+        balance.free[arbitrage.market.quoteCurrencyCode] ?? 0;
 
       if (quoteCurrencyBalance < requiredBalance) {
         throw new Error(
-          `Insufficient balance. Exchange: ${exchange.id}. Currency: ${arbitrage.quoteCurrency}`
+          `Insufficient balance. Exchange: ${exchange.id}. Currency: ${arbitrage.market.quoteCurrencyCode}`
         );
       }
 
       order = await exchange.createLimitBuyOrder(
-        arbitrage.symbol,
-        tradeStep.details.amount,
-        tradeStep.details.price
+        arbitrage.market.symbol,
+        tradeStep.amount,
+        tradeStep.price
       );
     } else {
-      const requiredBalance = tradeStep.details.amount;
-      const baseCurrencyBalance = balance.free[arbitrage.baseCurrency] ?? 0;
+      const requiredBalance = tradeStep.amount;
+      const baseCurrencyBalance =
+        balance.free[arbitrage.market.baseCurrencyCode] ?? 0;
 
       if (baseCurrencyBalance < requiredBalance) {
         throw new Error(
-          `Insufficient balance. Exchange: ${exchange.id}. Currency: ${arbitrage.baseCurrency}`
+          `Insufficient balance. Exchange: ${exchange.id}. Currency: ${arbitrage.market.baseCurrencyCode}`
         );
       }
 
       order = await exchange.createLimitSellOrder(
-        arbitrage.symbol,
-        tradeStep.details.amount,
-        tradeStep.details.price
+        arbitrage.market.symbol,
+        tradeStep.amount,
+        tradeStep.price
       );
     }
 
-    return await this.arbitrageRepo.updateArbitrageStep(tradeStep.id, {
-      status: ArbitrageStatus.PROCESSING,
-      details: { ...tradeStep, orderId: order.id },
-      arbitrageData: { update: { status: ArbitrageStatus.PROCESSING } },
-    });
+    const newStatus = ArbitrageStepStatus.PROCESSING;
+    await this.arbitrageRepo.updateTradeStep(
+      {
+        tradeStepId: tradeStep.tradeStepId,
+        arbitrageDataId: tradeStep.arbitrageDataId,
+      },
+      {
+        status: newStatus,
+        marketOrderId: order.id,
+      }
+    );
+    return newStatus;
   }
 
   private async processWithdrawArbitrageStep(
     withdrawStep: WithdrawArbitrageStep
-  ) {
+  ): Promise<ArbitrageStepStatus> {
     this.checkArbitrageStepStatus(withdrawStep.status);
-    if (withdrawStep.status === ArbitrageStatus.PROCESSED) {
-      return withdrawStep;
+    if (withdrawStep.status === ArbitrageStepStatus.PROCESSED) {
+      return withdrawStep.status;
     }
 
-    if (withdrawStep.status === ArbitrageStatus.PROCESSING) {
+    if (withdrawStep.status === ArbitrageStepStatus.PROCESSING) {
       return await this.handleProcessingWithdrawArbitrageStep(withdrawStep);
     }
 
-    if (withdrawStep.status === ArbitrageStatus.UNTOUCHED) {
+    if (withdrawStep.status === ArbitrageStepStatus.UNTOUCHED) {
       return await this.handleUntouchedWithdrawArbitrageStep(withdrawStep);
     }
-    throw new Error("Cannot process withdraw step:" + withdrawStep.id);
+    throw new Error(
+      "Cannot process withdraw step:" + withdrawStep.withdrawStepId
+    );
   }
 
   private async handleProcessingWithdrawArbitrageStep(
     withdrawStep: WithdrawArbitrageStep
-  ) {
-    const { currency, exchanges } = withdrawStep.details;
+  ): Promise<ArbitrageStepStatus> {
+    const { currencyCode, exchanges } = withdrawStep;
     const depositExchangeId = exchanges.deposit.id;
     const depositExchange = this.getExchange(depositExchangeId);
 
     const deposits = await depositExchange.getDeposits();
     const foundDeposit = deposits.find((deposit) => {
-      const isSameCurrency = deposit.currency === currency;
+      const isSameCurrency = deposit.currency === currencyCode;
       let isSameAddress = true;
       if (deposit.addressFrom && exchanges.deposit.address) {
         isSameAddress = deposit.addressFrom === exchanges.deposit.address;
@@ -224,36 +302,53 @@ export class MultiExchangeArbitrageProcessor implements Service {
     });
 
     if (!foundDeposit) {
-      return withdrawStep;
+      return withdrawStep.status;
     }
 
-    return await this.arbitrageRepo.updateArbitrageStep(withdrawStep.id, {
-      status: ArbitrageStatus.PROCESSED,
-    });
+    const newStatus = ArbitrageStepStatus.PROCESSED;
+    await this.arbitrageRepo.updateWithdrawStep(
+      {
+        withdrawStepId: withdrawStep.withdrawStepId,
+        arbitrageDataId: withdrawStep.arbitrageDataId,
+      },
+      {
+        status: newStatus,
+      }
+    );
+    return newStatus;
   }
 
   private async handleUntouchedWithdrawArbitrageStep(
     withdrawStep: WithdrawArbitrageStep
-  ) {
-    const { currency, amount, exchanges, network } = withdrawStep.details;
+  ): Promise<ArbitrageStepStatus> {
+    const { currencyCode, amount, exchanges, networkId } = withdrawStep;
     const withdrawExchangeId = exchanges.withdraw.id;
     const depositExchangeId = exchanges.deposit.id;
     const withdrawExchange = this.getExchange(withdrawExchangeId);
     const depositExchange = this.getExchange(depositExchangeId);
 
-    const depositAddress = await depositExchange.getDepositAddress(currency);
-    this.checkDepositNetwork(depositAddress, network);
+    const depositAddress =
+      await depositExchange.getDepositAddress(currencyCode);
+    this.checkDepositNetwork(depositAddress, networkId);
 
-    await withdrawExchange.withdraw(currency, amount, depositAddress.address);
+    await withdrawExchange.withdraw(
+      currencyCode,
+      amount,
+      depositAddress.address
+    );
 
-    return await this.arbitrageRepo.updateArbitrageStep(withdrawStep.id, {
-      status: ArbitrageStatus.PROCESSING,
-      arbitrageData: {
-        update: {
-          status: ArbitrageStatus.PROCESSING,
-        },
+    const newStatus = ArbitrageStepStatus.PROCESSING;
+    await this.arbitrageRepo.updateWithdrawStep(
+      {
+        withdrawStepId: withdrawStep.withdrawStepId,
+        arbitrageDataId: withdrawStep.arbitrageDataId,
       },
-    });
+      {
+        status: newStatus,
+      }
+    );
+
+    return newStatus;
   }
 
   private checkDepositNetwork(address: Address, network: string) {
@@ -274,11 +369,16 @@ export class MultiExchangeArbitrageProcessor implements Service {
     return exchange;
   }
 
-  private checkArbitrageStepStatus(status: ArbitrageStatus) {
-    const validStatuses: ArbitrageStatus[] = [
-      ArbitrageStatus.PROCESSED,
-      ArbitrageStatus.PROCESSING,
-      ArbitrageStatus.UNTOUCHED,
+  private checkArbitrageStepStatus(
+    status: ArbitrageStepStatus
+  ): asserts status is
+    | ArbitrageStepStatus.PROCESSED
+    | ArbitrageStepStatus.PROCESSING
+    | ArbitrageStepStatus.UNTOUCHED {
+    const validStatuses: ArbitrageStepStatus[] = [
+      ArbitrageStepStatus.PROCESSED,
+      ArbitrageStepStatus.PROCESSING,
+      ArbitrageStepStatus.UNTOUCHED,
     ];
 
     if (validStatuses.includes(status)) {

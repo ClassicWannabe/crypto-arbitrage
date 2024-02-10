@@ -26,30 +26,3 @@ export const arbitrageConfigSchema = z.object({
 
 export const deepPartialArbitrageConfigSchema =
   arbitrageConfigSchema.deepPartial();
-
-export const tradeArbitrageStepDetails = z.object({
-  operation: z.nativeEnum(TradeOperation),
-  amount: z.number().positive(),
-  price: z.number().positive(),
-  exchange: z.string().min(1),
-  fee: z.object({
-    value: z.number().nonnegative(),
-    type: z.nativeEnum(FeeType),
-  }),
-  orderId: z.string().min(1).nullish(),
-});
-
-const exchangeDetailsSchema = z.object({
-  id: z.string().min(1),
-  address: z.string().min(1).nullish(),
-});
-
-export const withdrawArbitrageStepDetails = z.object({
-  amount: z.number().positive(),
-  network: z.string().min(1),
-  currency: z.string().min(1),
-  exchanges: z.object({
-    withdraw: exchangeDetailsSchema,
-    deposit: exchangeDetailsSchema,
-  }),
-});

@@ -74,8 +74,8 @@ export class CryptoArbitrageStack extends cdk.Stack {
       readCapacity: 25,
       writeCapacity: 25,
       tableName: "crypto-arbitrage",
-      timeToLiveAttribute: "ttl",
-      deletionProtection: true,
+      timeToLiveAttribute: "expireAt",
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
   }
 }

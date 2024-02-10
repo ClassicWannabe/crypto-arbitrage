@@ -4,8 +4,6 @@ import {
   arbitrageConfigSchema,
   deepPartialArbitrageConfigSchema,
   rateLimitsSchema,
-  tradeArbitrageStepDetails,
-  withdrawArbitrageStepDetails,
 } from "./schema.js";
 
 export interface Storage {
@@ -22,12 +20,6 @@ export type DeepPartialArbitrageConfig = z.infer<
   typeof deepPartialArbitrageConfigSchema
 >;
 export type RateLimits = z.infer<typeof rateLimitsSchema>;
-export type TradeArbitrageStepDetails = z.infer<
-  typeof tradeArbitrageStepDetails
->;
-export type WithdrawArbitrageStepDetails = z.infer<
-  typeof withdrawArbitrageStepDetails
->;
 
 export enum ArbitrageDataStatus {
   UNCONFIRMED = "UNCONFIRMED",
@@ -43,12 +35,12 @@ export enum ArbitrageStepType {
   WITHDRAW = "WITHDRAW",
 }
 export enum ArbitrageStepStatus {
-  PROCESSED = "PROCESSED",
-  PROCESSING = "PROCESSING",
-  UNTOUCHED = "UNTOUCHED",
-  FAILED = "FAILED",
-  CANCELLED = "CANCELLED",
-  EXPIRED = "EXPIRED",
+  PROCESSED = ArbitrageDataStatus.PROCESSED,
+  PROCESSING = ArbitrageDataStatus.PROCESSING,
+  UNTOUCHED = ArbitrageDataStatus.UNTOUCHED,
+  FAILED = ArbitrageDataStatus.FAILED,
+  CANCELLED = ArbitrageDataStatus.CANCELLED,
+  EXPIRED = ArbitrageDataStatus.EXPIRED,
 }
 export enum EntityType {
   ARBITRAGE_DATA = "ARBITRAGE_DATA",

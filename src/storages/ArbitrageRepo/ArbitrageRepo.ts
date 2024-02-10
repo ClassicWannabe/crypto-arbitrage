@@ -1,32 +1,23 @@
-import {
-  PrismaClient,
-  ArbitrageStepType,
-  Prisma,
-  ArbitrageStatus,
-} from "@prisma/client";
-import { randomUUID } from "crypto";
-import { CreateEntityItem } from "electrodb";
+import { EntityIdentifiers, UpdateEntityItem } from "electrodb";
 
-import {
-  tradeArbitrageStepDetails,
-  withdrawArbitrageStepDetails,
-} from "../schema.js";
-import { ProcessableArbitrage, ProcessableArbitrageStatus } from "./types.js";
 import { ArbitrageData, ExchangeEvent } from "../../types.js";
+import { ArbitrageDataStatus } from "../types.js";
+import { DdbTableSingleton } from "../ddb/DdbTableSingleton.js";
+import {
+  ArbitrageCollection,
+  TradeStepCreateInput,
+  WithdrawStepCreateInput,
+} from "../ddb/types.js";
+import { ArbitrageDataEntity } from "../ddb/entities/ArbitrageDataEntity.js";
 import { TradeStepEntity } from "../ddb/entities/TradeStepEntity.js";
 import { WithdrawStepEntity } from "../ddb/entities/WithdrawStepEntity.js";
-import { getTable } from "../ddb/helpers.js";
-import { ArbitrageDataStatus } from "../types.js";
-
-type TradeStepCreateInput = CreateEntityItem<typeof TradeStepEntity>;
-
-type WithdrawStepCreateInput = CreateEntityItem<typeof WithdrawStepEntity>;
 
 export class ArbitrageRepo {
-  private readonly table = getTable();
+  private readonly table = DdbTableSingleton.getTable();
+
   constructor() {}
 
-  async getArbitrages(): Promise<ProcessableArbitrage[]> {
+  async getArbitrages(): Promise<ArbitrageCollection[]> {
     const arbitrages = await this.table.entities.arbitrageData.scan
       .where(
         ({ status }, { eq }) =>
@@ -34,13 +25,14 @@ export class ArbitrageRepo {
       )
       .go({ pages: "all" });
 
-    return (await Promise.all(
+    return await Promise.all(
       arbitrages.data.map(async (arbitrage) => {
-        return await this.table.collections
+        const response = await this.table.collections
           .arbitrages({ arbitrageDataId: arbitrage.arbitrageDataId })
           .go();
+        return response.data;
       })
-    )) as unknown as ProcessableArbitrage[];
+    );
   }
 
   async saveArbitrage(arbitrage: ArbitrageData) {
@@ -118,28 +110,24 @@ export class ArbitrageRepo {
     }, []);
   }
 
-  private parseStepDetails(type: ArbitrageStepType, details: unknown) {
-    switch (type) {
-      case ArbitrageStepType.TRADE: {
-        return tradeArbitrageStepDetails.parse(details);
-      }
-      case ArbitrageStepType.WITHDRAW: {
-        return withdrawArbitrageStepDetails.parse(details);
-      }
-    }
-
-    throw new Error("Uknown step type:" + type);
+  async updateTradeStep(
+    id: EntityIdentifiers<typeof TradeStepEntity>,
+    data: UpdateEntityItem<typeof TradeStepEntity>
+  ) {
+    return await this.table.entities.tradeStep.patch(id).set(data).go();
   }
 
-  async expireArbitrages(ids: string[]) {}
-
-  async updateArbitrageStep(
-    id: string,
-    data: Prisma.ArbitrageStepUpdateInput
-  ) {}
+  async updateWithdrawStep(
+    id: EntityIdentifiers<typeof WithdrawStepEntity>,
+    data: UpdateEntityItem<typeof WithdrawStepEntity>
+  ) {
+    return await this.table.entities.withdrawStep.patch(id).set(data).go();
+  }
 
   async updateArbitrageData(
-    id: string,
-    data: Prisma.ArbitrageDataUpdateInput
-  ) {}
+    id: EntityIdentifiers<typeof ArbitrageDataEntity>,
+    data: UpdateEntityItem<typeof ArbitrageDataEntity>
+  ) {
+    return await this.table.entities.arbitrageData.patch(id).set(data).go();
+  }
 }

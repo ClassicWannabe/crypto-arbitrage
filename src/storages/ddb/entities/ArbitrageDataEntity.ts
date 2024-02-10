@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 
 import { EntityType } from "../../types.js";
 import { ArbitrageDataStatus } from "../../types.js";
-import { getConfirmationCode } from "../helpers.js";
+import { getConfirmationCode, getExpireAtValue } from "../helpers.js";
 import { DDB_TABLE_NAME } from "../../../consts.js";
 import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 
@@ -34,14 +34,17 @@ export const ArbitrageDataEntity = new Entity({
         symbol: {
           type: "string",
           required: true,
+          readOnly: true,
         },
         baseCurrencyCode: {
           type: "string",
           required: true,
+          readOnly: true,
         },
         quoteCurrencyCode: {
           type: "string",
           required: true,
+          readOnly: true,
         },
       },
     },
@@ -66,18 +69,15 @@ export const ArbitrageDataEntity = new Entity({
       default: () => new Date().toISOString(),
       set: () => new Date().toISOString(),
     },
+    expireAt: {
+      type: "number",
+      required: true,
+      readOnly: true,
+      default: () => getExpireAtValue(),
+      set: () => getExpireAtValue(),
+    },
   },
   indexes: {
-    // arbitrageData: {
-    //   pk: {
-    //     field: PARTITION_KEY_NAME,
-    //     composite: ["id"],
-    //   },
-    //   sk: {
-    //     field: SORT_KEY_NAME,
-    //     composite: ["id"],
-    //   },
-    // },
     arbitrages: {
       collection: "arbitrages",
       pk: {

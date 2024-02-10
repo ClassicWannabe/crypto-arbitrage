@@ -21,7 +21,6 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.506.0",
     "@aws-sdk/lib-dynamodb": "^3.506.0",
-    "@prisma/client": "^5.8.1",
     "aws-cdk-lib": "^2.121.1",
     "ccxt": "^4.2.10",
     "constructs": "^10.3.0",
