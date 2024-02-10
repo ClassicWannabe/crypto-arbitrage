@@ -69,6 +69,7 @@ export type TradeStep = {
   endCoin: CurrencyAmount;
   orderBook: OrderBook;
   price: number;
+  amount: number;
   exchangeId: string;
   fee: Fee;
   dayChangePercentage?: number | null;

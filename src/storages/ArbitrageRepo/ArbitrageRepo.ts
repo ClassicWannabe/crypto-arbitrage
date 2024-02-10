@@ -67,9 +67,10 @@ export class ArbitrageRepo {
       if (step.event !== ExchangeEvent.TRADE) {
         return acc;
       }
+
       acc.push({
         stepOrder: index + 1,
-        amount: step.startCoin.amount,
+        amount: step.amount,
         arbitrageDataId,
         tradeOperation: step.operation,
         exchangeId: step.exchangeId,
