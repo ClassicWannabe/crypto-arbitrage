@@ -9,6 +9,17 @@ export class CryptoArbitrageStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const ddbTable = new dynamodb.Table(this, "crypto-arbitrage-ddb-table", {
+      partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 25,
+      writeCapacity: 25,
+      tableName: "crypto-arbitrage",
+      timeToLiveAttribute: "expireAt",
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     const defaultvpc = ec2.Vpc.fromLookup(this, "vpc", { isDefault: true });
 
     const instanceRole = new iam.Role(this, "arbitrage-bot-role", {
@@ -39,6 +50,25 @@ export class CryptoArbitrageStack extends cdk.Stack {
             }),
           ],
         }),
+        ddb: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: [
+                "dynamodb:BatchGet*",
+                "dynamodb:DescribeStream",
+                "dynamodb:DescribeTable",
+                "dynamodb:Get*",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchWrite*",
+                "dynamodb:Delete*",
+                "dynamodb:Update*",
+                "dynamodb:PutItem",
+              ],
+              resources: [ddbTable.tableArn],
+            }),
+          ],
+        }),
       },
     });
 
@@ -66,16 +96,5 @@ export class CryptoArbitrageStack extends cdk.Stack {
     const userDataScript = readFileSync("./lib/user-data.sh", "utf8");
 
     instance.addUserData(userDataScript);
-
-    new dynamodb.Table(this, "crypto-arbitrage-ddb-table", {
-      partitionKey: { name: "pk", type: dynamodb.AttributeType.STRING },
-      sortKey: { name: "sk", type: dynamodb.AttributeType.STRING },
-      billingMode: dynamodb.BillingMode.PROVISIONED,
-      readCapacity: 25,
-      writeCapacity: 25,
-      tableName: "crypto-arbitrage",
-      timeToLiveAttribute: "expireAt",
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
   }
 }

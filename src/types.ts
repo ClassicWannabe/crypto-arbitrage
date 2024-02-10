@@ -1,9 +1,4 @@
-import { OrderBook, Ticker } from "./exchanges/types.js";
-
-export enum ScriptStatus {
-  RUNNING = "running",
-  STOPPED = "stopped",
-}
+import { OrderBook } from "./exchanges/types.js";
 
 export enum TrasnferOperation {
   DEPOSIT = "deposit",
@@ -100,7 +95,7 @@ export type WithdrawStep = {
   exchanges: {
     withdrawExchangeId: string;
     depositExchangeId: string;
-  },
+  };
   coin: CurrencyAmount;
   fee: Fee;
 };

@@ -1,8 +1,5 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { Monitor } from "forever-monitor";
-import url from "url";
-import path from "path";
 
 import {
   getEnv,
@@ -12,10 +9,8 @@ import {
 import { logger } from "./logger/logger.js";
 import { FileStorage } from "./storages/File/File.js";
 import { ObjectFormatter } from "./formatters/ObjectFormatter/ObjectFormatter.js";
-import { ScriptStatus } from "./types.js";
-
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { ScriptRunner } from "./services/ScriptRunner/ScriptRunner.js";
+import { Script } from "./services/ScriptRunner/types.js";
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
@@ -25,12 +20,7 @@ const bot = new TelegramBot(telegramBotToken, {
 const storage = new FileStorage();
 const objectFormatter = new ObjectFormatter();
 
-const runArbitrageFinderServiceChild = new Monitor(
-  path.resolve(__dirname + "/scripts/runArbitrageFinderService.js")
-);
-
-runArbitrageFinderServiceChild.start();
-let scriptStatus: ScriptStatus = ScriptStatus.RUNNING;
+const arbitrageFinderScript = new ScriptRunner(Script.ARBITRAGE_FINDER);
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -40,30 +30,8 @@ bot.onText(/\/start/, async (msg) => {
     return;
   }
 
-  if (scriptStatus === ScriptStatus.RUNNING) {
-    await bot.sendMessage(chatId, "Already running...");
-  } else {
-    runArbitrageFinderServiceChild.start();
-    scriptStatus = ScriptStatus.RUNNING;
-    await bot.sendMessage(chatId, "Activated arbitrage calculation...");
-  }
-});
-
-bot.onText(/\/start force/, async (msg) => {
-  const chatId = msg.chat.id;
-
-  if (chatId !== telegramGroupId) {
-    await handleUnwantedRequest(msg);
-    return;
-  }
-
-  runArbitrageFinderServiceChild.start();
-  scriptStatus = ScriptStatus.RUNNING;
-
-  await bot.sendMessage(
-    chatId,
-    "Forcefully activated arbitrage calculation..."
-  );
+  arbitrageFinderScript.start();
+  await bot.sendMessage(chatId, "Activated arbitrage calculation...");
 });
 
 bot.onText(/\/stop/, async (msg) => {
@@ -74,13 +42,8 @@ bot.onText(/\/stop/, async (msg) => {
     return;
   }
 
-  if (scriptStatus === ScriptStatus.RUNNING) {
-    runArbitrageFinderServiceChild.stop();
-    scriptStatus = ScriptStatus.STOPPED;
-    await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
-  } else {
-    await bot.sendMessage(chatId, "Already stopped...");
-  }
+  arbitrageFinderScript.stop();
+  await bot.sendMessage(chatId, "Stopped arbitrage calculation...");
 });
 
 bot.onText(/\/setProfit ([0-9]+)/, async (msg, match) => {
@@ -258,7 +221,3 @@ const handleFailedRequest = async (chatId: number) => {
 };
 
 await bot.sendMessage(telegramGroupId, "I am revived!");
-
-runArbitrageFinderServiceChild.on("exit", () => {
-  scriptStatus = ScriptStatus.STOPPED;
-});
