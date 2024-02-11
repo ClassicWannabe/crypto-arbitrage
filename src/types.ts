@@ -111,7 +111,7 @@ export type ArbitrageSteps = [
   StatusStep,
 ];
 
-export enum NODE_ENV {
+export enum NodeEnv {
   PROD = "prod",
   DEV = "dev",
 }

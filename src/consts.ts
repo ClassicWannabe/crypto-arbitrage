@@ -25,8 +25,6 @@ export const ENV = {
   telegramDeveloperId: process.env.TELEGRAM_DEVELOPER_ID,
   awsRegion: process.env.AWS_REGION,
   awsSnsTopicParameterName: process.env.AWS_SNS_TOPIC_PARAMETER_NAME,
+  ddbLocalEndpoint: process.env.DDB_LOCAL_ENDPOINT,
+  ddbTableName: process.env.DDB_TABLE_NAME,
 } as const;
-
-export const DDB_TABLE_NAME = "crypto-arbitrage";
-
-export const DDB_LOCAL_ENDPOINT = "http://localhost:8000";
