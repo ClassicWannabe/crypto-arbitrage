@@ -37,7 +37,12 @@ export class MultiExchangeArbitrageProcessor implements Service {
     await this.expireArbitrages(formattedArbitrages);
 
     for (const arbitrage of validArbitrages) {
-      this.processArbitrage(arbitrage);
+      try {
+        await this.processArbitrage(arbitrage);
+      } catch (e) {
+        const error = e as Error;
+        logger.error("Failed to process arbitrage", { error: error.stack });
+      }
     }
   }
 
