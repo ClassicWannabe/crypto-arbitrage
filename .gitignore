@@ -10,3 +10,5 @@ server.log
 yarn-error.log
 .yarn
 .yarnrc.yml
+
+data/symbols.json
