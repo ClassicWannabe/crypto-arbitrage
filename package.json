@@ -13,13 +13,16 @@
     "local:db": "sudo docker compose up",
     "build": "rimraf ./build && tsc",
     "test": "vitest",
-    "script:arbitrage:prod": "npm run build && node build/scripts/runArbitrageFinderService.js",
+    "script:arbitrage-finder:prod": "npm run build && node build/scripts/runArbitrageFinderService.js",
+    "script:arbitrage-processor:prod": "npm run build && node build/scripts/runArbitrageProcessorService.js",
     "script:arbitrage:dev": "tsx watch src/scripts/runArbitrageFinderService.ts",
     "deploy": "npx cdk deploy",
     "destroy": "npx cdk destroy"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.506.0",
+    "@aws-sdk/client-sns": "^3.511.0",
+    "@aws-sdk/client-ssm": "^3.511.0",
     "@aws-sdk/lib-dynamodb": "^3.506.0",
     "aws-cdk-lib": "^2.121.1",
     "ccxt": "^4.2.10",

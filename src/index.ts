@@ -11,6 +11,11 @@ import { FileStorage } from "./storages/File/File.js";
 import { ObjectFormatter } from "./formatters/ObjectFormatter/ObjectFormatter.js";
 import { ScriptRunner } from "./services/ScriptRunner/ScriptRunner.js";
 import { Script } from "./services/ScriptRunner/types.js";
+import { ArbitrageRepo } from "./storages/ArbitrageRepo/ArbitrageRepo.js";
+import { EmailPublisher } from "./publishers/EmailPublisher/EmailPublisher.js";
+import { InitArbitrageCallbackQueryData } from "./bot/types.js";
+import { initArbitrageCallbackQueryDataSchema } from "./bot/schema.js";
+import { ArbitrageDataStatus } from "./storages/types.js";
 
 const telegramBotToken = getEnv("telegramBotToken");
 const telegramGroupId = +getEnv("telegramGroupId");
@@ -19,8 +24,55 @@ const bot = new TelegramBot(telegramBotToken, {
 });
 const storage = new FileStorage();
 const objectFormatter = new ObjectFormatter();
+const arbitrageRepo = new ArbitrageRepo();
+const emailPublisher = new EmailPublisher();
 
 const arbitrageFinderScript = new ScriptRunner(Script.ARBITRAGE_FINDER);
+
+// bot.onText(/\/but/, async (msg) => {
+//   const chatId = msg.chat.id;
+
+//   if (chatId !== telegramGroupId) {
+//     await handleUnwantedRequest(msg);
+//     return;
+//   }
+//   const data: InitArbitrageCallbackQueryData = {
+//     arbitrageDataId: "41322c58-c820-4733-abd5-6bf51557efb8",
+//   };
+
+//   await bot.sendMessage(chatId, "Activated arbitrage calculation...", {
+//     reply_markup: {
+//       inline_keyboard: [
+//         [{ text: "Подтвердить", callback_data: JSON.stringify(data) }],
+//       ],
+//     },
+//   });
+// });
+
+// bot.on("callback_query", async (callbackQuery) => {
+//   const chatId = callbackQuery.message?.chat.id;
+//   const callbackQueryData = callbackQuery.data;
+
+//   if (!chatId || !callbackQueryData) {
+//     return;
+//   }
+//   const data = initArbitrageCallbackQueryDataSchema.parse(
+//     JSON.parse(callbackQueryData)
+//   );
+//   const arbitrageData = await arbitrageRepo.getArbitrageData(data);
+//   if (arbitrageData.status !== ArbitrageDataStatus.UNCONFIRMED) {
+//     await bot.sendMessage(chatId, "Невозможно начать сделку");
+//     return;
+//   }
+
+//   await emailPublisher.publish(
+//     `Код подтверждения для ${arbitrageData.market.symbol}: ${arbitrageData.confirmationCode}`
+//   );
+//   await bot.sendMessage(
+//     chatId,
+//     `Отправлен код подтверждения для ${arbitrageData.market.symbol}`
+//   );
+// });
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -220,4 +272,4 @@ const handleFailedRequest = async (chatId: number) => {
   await bot.sendMessage(chatId, "Something went wrong...");
 };
 
-await bot.sendMessage(telegramGroupId, "I am revived!");
+await bot.sendMessage(telegramGroupId, "I am revived!!!");
