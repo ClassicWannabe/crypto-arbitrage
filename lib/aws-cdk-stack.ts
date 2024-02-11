@@ -5,7 +5,7 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as customresources from "aws-cdk-lib/custom-resources";
+import * as customResources from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
 
@@ -28,7 +28,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
     this.createInstanceRole();
     this.setVpc();
     this.createInstance();
-    this.createInstanceCodeUpdateResources();
+    this.createInstanceRebootCustomResources();
   }
 
   private createSnsTopic() {
@@ -95,7 +95,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
     this.codeUpdateScriptParameter = codeUpdateScriptParameter;
   }
 
-  private createInstanceCodeUpdateResources() {
+  private createInstanceRebootCustomResources() {
     const rebootEC2Code = readFileSync("./lib/rebootEC2.js", "utf-8");
     const rebootFunction = new lambda.Function(
       this,
@@ -133,9 +133,23 @@ export class CryptoArbitrageStack extends cdk.Stack {
       })
     );
 
-    new customresources.Provider(this, "reboot-instance-custom-resource", {
-      onEventHandler: rebootFunction,
-    });
+    new customResources.AwsCustomResource(
+      this,
+      "reboot-instance-custom-resource",
+      {
+        onUpdate: {
+          service: "Lambda",
+          action: "invoke",
+          parameters: {
+            FunctionName: rebootFunction.functionArn,
+          },
+          physicalResourceId: customResources.PhysicalResourceId.of(
+            "reboot-resource" + new Date().toISOString()
+          ),
+        },
+        role: customResourceRole,
+      }
+    );
   }
 
   private createInstanceRole() {
