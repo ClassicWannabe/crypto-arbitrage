@@ -69,6 +69,6 @@ export class FileStorage implements Storage {
     path: string,
     data: Record<string, unknown> | unknown[]
   ) {
-    await fs.writeFile(path, JSON.stringify(data), { flag: "wx" });
+    await fs.writeFile(path, JSON.stringify(data), { flag: "w" });
   }
 }
