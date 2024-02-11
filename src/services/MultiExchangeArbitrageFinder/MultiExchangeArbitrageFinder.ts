@@ -1,8 +1,6 @@
 import { chunk } from "lodash-es";
 
 import { MultiExchangeCalculator } from "../../calculators/MultiExchangeCalculator/MultiExchangeCalculator.js";
-import { Formatter } from "../../formatters/types.js";
-import { Publisher } from "../../publishers/types.js";
 import { Storage } from "../../storages/types.js";
 import { Service } from "../types.js";
 import { ArbitrageData } from "../../types.js";
@@ -11,6 +9,7 @@ import { sleep } from "../../helpers.js";
 import { ArbitrageRepo } from "../../storages/ArbitrageRepo/ArbitrageRepo.js";
 import { TelegramPublisher } from "../../publishers/TelegramPublisher/TelegramPublisher.js";
 import { InitArbitrageCallbackQueryData } from "../../bot/types.js";
+import { ArbitrageFormatter } from "../../formatters/ArbitrageFormatter/ArbitrageFormatter.js";
 
 export class MultiExchangeArbitrageFinder implements Service {
   private exchangesLastReloadDate = new Date();
@@ -18,7 +17,7 @@ export class MultiExchangeArbitrageFinder implements Service {
 
   constructor(
     private readonly calculator: MultiExchangeCalculator,
-    private readonly formatter: Formatter,
+    private readonly formatter: ArbitrageFormatter,
     private readonly publisher: TelegramPublisher,
     private readonly arbitrageRepo: ArbitrageRepo,
     private readonly storage: Storage,
@@ -82,8 +81,7 @@ export class MultiExchangeArbitrageFinder implements Service {
   private async postProcessData(arbitrages: ArbitrageData[]) {
     for (const arbitrage of arbitrages) {
       const arbitrageData = await this.arbitrageRepo.saveArbitrage(arbitrage);
-
-      const formattedMessage = await this.formatter.format(arbitrageData);
+      const formattedMessage = await this.formatter.format(arbitrage);
       const callbackData: InitArbitrageCallbackQueryData = {
         arbitrageDataId: arbitrageData.arbitrageDataId,
       };
