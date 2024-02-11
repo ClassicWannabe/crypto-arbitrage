@@ -9,6 +9,8 @@ import { ArbitrageData } from "../../types.js";
 import { logger } from "../../logger/logger.js";
 import { sleep } from "../../helpers.js";
 import { ArbitrageRepo } from "../../storages/ArbitrageRepo/ArbitrageRepo.js";
+import { TelegramPublisher } from "../../publishers/TelegramPublisher/TelegramPublisher.js";
+import { InitArbitrageCallbackQueryData } from "../../bot/types.js";
 
 export class MultiExchangeArbitrageFinder implements Service {
   private exchangesLastReloadDate = new Date();
@@ -17,7 +19,7 @@ export class MultiExchangeArbitrageFinder implements Service {
   constructor(
     private readonly calculator: MultiExchangeCalculator,
     private readonly formatter: Formatter,
-    private readonly publisher: Publisher,
+    private readonly publisher: TelegramPublisher,
     private readonly arbitrageRepo: ArbitrageRepo,
     private readonly storage: Storage,
     private readonly symbolsChunkSize: number,
@@ -50,8 +52,8 @@ export class MultiExchangeArbitrageFinder implements Service {
         logger.info("Found potential arbitrage offers", { arbitrages });
       }
 
-      await this.saveData(arbitrages);
-      await this.publishData(arbitrages);
+      await this.postProcessData(arbitrages);
+
       this.symbolPointer = iteration * this.symbolsChunkSize;
       iteration++;
     }
@@ -77,20 +79,27 @@ export class MultiExchangeArbitrageFinder implements Service {
     return dataArray.flat();
   }
 
-  private async saveData(arbitrages: ArbitrageData[]) {
+  private async postProcessData(arbitrages: ArbitrageData[]) {
     for (const arbitrage of arbitrages) {
-      await this.arbitrageRepo.saveArbitrage(arbitrage);
-    }
-  }
+      const arbitrageData = await this.arbitrageRepo.saveArbitrage(arbitrage);
 
-  private async publishData(arbitrages: ArbitrageData[]) {
-    // Removed `Promise.all` to decrease load on the server
-    for (const arbitrageData of arbitrages) {
       const formattedMessage = await this.formatter.format(arbitrageData);
-      await this.publisher.publish(
-        formattedMessage.text,
-        formattedMessage.image
-      );
+      const callbackData: InitArbitrageCallbackQueryData = {
+        arbitrageDataId: arbitrageData.arbitrageDataId,
+      };
+      await this.publisher.publish(formattedMessage.text, {
+        image: formattedMessage.image,
+        inlineKeyboard: {
+          inline_keyboard: [
+            [
+              {
+                text: "Подтвердить",
+                callback_data: JSON.stringify(callbackData),
+              },
+            ],
+          ],
+        },
+      });
     }
   }
 

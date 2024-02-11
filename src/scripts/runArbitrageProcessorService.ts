@@ -1,7 +1,12 @@
 import "dotenv/config";
+import {
+  SNSClient,
+  ListTopicsCommand,
+  PublishCommand,
+} from "@aws-sdk/client-sns";
+
 import { sleep } from "../helpers.js";
 import { FileStorage } from "../storages/File/File.js";
-
 import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js";
 import { ExchangeType } from "../exchanges/types.js";
 import { ArbitrageRepo } from "../storages/ArbitrageRepo/ArbitrageRepo.js";

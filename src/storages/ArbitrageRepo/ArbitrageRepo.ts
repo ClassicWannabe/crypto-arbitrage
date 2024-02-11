@@ -15,8 +15,6 @@ import { WithdrawStepEntity } from "../ddb/entities/WithdrawStepEntity.js";
 export class ArbitrageRepo {
   private readonly table = DdbTableSingleton.getTable();
 
-  constructor() {}
-
   async getArbitrages(): Promise<ArbitrageCollection[]> {
     const arbitrages = await this.table.entities.arbitrageData.scan
       .where(
@@ -35,6 +33,16 @@ export class ArbitrageRepo {
     );
   }
 
+  async getArbitrageData(id: EntityIdentifiers<typeof ArbitrageDataEntity>) {
+    const result = await this.table.entities.arbitrageData.get(id).go();
+    if (!result.data) {
+      throw new Error(
+        "Could not find arbitrage data by ID:" + id.arbitrageDataId
+      );
+    }
+    return result.data;
+  }
+
   async saveArbitrage(arbitrage: ArbitrageData) {
     const { baseCurrencyCode, quoteCurrencyCode, steps, symbol } = arbitrage;
     const arbitrageData = await this.table.entities.arbitrageData
@@ -42,6 +50,7 @@ export class ArbitrageRepo {
         market: { baseCurrencyCode, quoteCurrencyCode, symbol },
       })
       .go();
+
     const arbitrageDataId = arbitrageData.data.arbitrageDataId;
 
     const tradeStepCreateInputs = this.getTradeStepCreateInputs(
@@ -57,6 +66,8 @@ export class ArbitrageRepo {
       this.table.entities.tradeStep.put(tradeStepCreateInputs).go(),
       this.table.entities.withdrawStep.put(withdrawStepCreateInputs).go(),
     ]);
+
+    return arbitrageData.data;
   }
 
   private getTradeStepCreateInputs(

@@ -1,3 +1,3 @@
 export interface Publisher {
-  publish(message: string, image?: Buffer): Promise<void>;
+  publish(message: string, options?: any): Promise<void>;
 }

@@ -26,8 +26,12 @@ mkdir ~/arbitrage-app
 git clone git@github.com:ClassicWannabe/crypto-arbitrage.git ~/arbitrage-app/
 aws ssm get-parameter --with-decryption --name /crypto-arbitrage/env --output text --query Parameter.Value > ~/arbitrage-app/.env
 
+# Get the code update script on reboot
+aws ssm get-parameter --name /crypto-arbitrage/code-update-script --output text --query Parameter.Value > /var/lib/cloud/scripts/per-boot/code-update.sh
+chmod +x /var/lib/cloud/scripts/per-boot/code-update.sh
+
 # Start the app
 cd ~/arbitrage-app
 npm install
-screen
+npm install -g forever
 npm run start:prod
