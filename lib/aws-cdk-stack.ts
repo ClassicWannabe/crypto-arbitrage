@@ -9,6 +9,11 @@ import * as customResources from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
 
+const EMAIL_SUBSCRIPTIONS = [
+  "ryeleussinov@gmail.com",
+  "zhurinbaev.azamat@gmail.com",
+];
+
 export class CryptoArbitrageStack extends cdk.Stack {
   private snsTopic: sns.Topic;
   private snsTopicArnParameter: ssm.StringParameter;
@@ -34,11 +39,13 @@ export class CryptoArbitrageStack extends cdk.Stack {
   private createSnsTopic() {
     const snsTopic = new sns.Topic(this, "confirmation-code-sender-sns");
 
-    new sns.Subscription(this, "email-subscription", {
-      topic: snsTopic,
-      protocol: cdk.aws_sns.SubscriptionProtocol.EMAIL,
-      endpoint: "ryeleussinov@gmail.com",
-    });
+    for (const email of EMAIL_SUBSCRIPTIONS) {
+      new sns.Subscription(this, `email-subscription-${email}`, {
+        topic: snsTopic,
+        protocol: cdk.aws_sns.SubscriptionProtocol.EMAIL,
+        endpoint: email,
+      });
+    }
 
     this.snsTopic = snsTopic;
   }
