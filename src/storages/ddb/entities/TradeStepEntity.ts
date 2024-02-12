@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { ArbitrageStepType, EntityType } from "../../types.js";
 import { ArbitrageStepStatus } from "../../types.js";
 import { FeeType, TradeOperation } from "../../../types.js";
-import { DDB_TABLE_NAME } from "../../../consts.js";
 import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 import { getExpireAtValue } from "../helpers.js";
 
@@ -12,7 +11,7 @@ export const TradeStepEntity = new Entity({
   model: {
     entity: EntityType.TRADE_STEP,
     version: "1",
-    service: DDB_TABLE_NAME,
+    service: "crypto-arbitrage",
   },
   attributes: {
     tradeStepId: {

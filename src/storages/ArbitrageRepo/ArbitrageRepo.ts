@@ -19,7 +19,7 @@ export class ArbitrageRepo {
     const arbitrages = await this.table.entities.arbitrageData.scan
       .where(
         ({ status }, { eq }) =>
-          `${eq(status, ArbitrageDataStatus.UNTOUCHED)} OR ${eq(status, ArbitrageDataStatus.PROCESSING)}`
+          `${eq(status, ArbitrageDataStatus.UNTOUCHED)} OR ${eq(status, ArbitrageDataStatus.PROCESSING)} OR ${eq(status, ArbitrageDataStatus.UNCONFIRMED)}`
       )
       .go({ pages: "all" });
 

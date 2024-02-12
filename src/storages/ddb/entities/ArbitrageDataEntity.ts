@@ -4,14 +4,13 @@ import { randomUUID } from "crypto";
 import { EntityType } from "../../types.js";
 import { ArbitrageDataStatus } from "../../types.js";
 import { getConfirmationCode, getExpireAtValue } from "../helpers.js";
-import { DDB_TABLE_NAME } from "../../../consts.js";
 import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 
 export const ArbitrageDataEntity = new Entity({
   model: {
     entity: EntityType.ARBITRAGE_DATA,
     version: "1",
-    service: DDB_TABLE_NAME,
+    service: "crypto-arbitrage",
   },
   attributes: {
     arbitrageDataId: {

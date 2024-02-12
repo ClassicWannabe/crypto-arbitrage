@@ -3,7 +3,6 @@ import { randomUUID } from "crypto";
 
 import { ArbitrageStepType, EntityType } from "../../types.js";
 import { ArbitrageStepStatus } from "../../types.js";
-import { DDB_TABLE_NAME } from "../../../consts.js";
 import { PARTITION_KEY_NAME, SORT_KEY_NAME } from "../consts.js";
 import { FeeType } from "../../../types.js";
 import { getExpireAtValue } from "../helpers.js";
@@ -12,7 +11,7 @@ export const WithdrawStepEntity = new Entity({
   model: {
     entity: EntityType.WITHDRAW_STEP,
     version: "1",
-    service: DDB_TABLE_NAME,
+    service: "crypto-arbitrage",
   },
   attributes: {
     withdrawStepId: {
@@ -80,12 +79,10 @@ export const WithdrawStepEntity = new Entity({
     exchanges: {
       type: "map",
       required: true,
-      readOnly: true,
       properties: {
         withdraw: {
           type: "map",
           required: true,
-          readOnly: true,
           properties: {
             id: {
               type: "string",
@@ -100,7 +97,6 @@ export const WithdrawStepEntity = new Entity({
         deposit: {
           type: "map",
           required: true,
-          readOnly: true,
           properties: {
             id: {
               type: "string",

@@ -13,7 +13,6 @@ import { ScriptRunner } from "./services/ScriptRunner/ScriptRunner.js";
 import { Script } from "./services/ScriptRunner/types.js";
 import { ArbitrageRepo } from "./storages/ArbitrageRepo/ArbitrageRepo.js";
 import { EmailPublisher } from "./publishers/EmailPublisher/EmailPublisher.js";
-import { InitArbitrageCallbackQueryData } from "./bot/types.js";
 import { initArbitrageCallbackQueryDataSchema } from "./bot/schema.js";
 import { ArbitrageDataStatus } from "./storages/types.js";
 
@@ -28,51 +27,74 @@ const arbitrageRepo = new ArbitrageRepo();
 const emailPublisher = new EmailPublisher();
 
 const arbitrageFinderScript = new ScriptRunner(Script.ARBITRAGE_FINDER);
+const arbitrageProcessorScript = new ScriptRunner(Script.ARBITRAGE_PROCESSOR);
 
-// bot.onText(/\/but/, async (msg) => {
-//   const chatId = msg.chat.id;
+bot.on("callback_query", async (callbackQuery) => {
+  const chatId = callbackQuery.message?.chat.id;
+  const callbackQueryData = callbackQuery.data;
 
-//   if (chatId !== telegramGroupId) {
-//     await handleUnwantedRequest(msg);
-//     return;
-//   }
-//   const data: InitArbitrageCallbackQueryData = {
-//     arbitrageDataId: "41322c58-c820-4733-abd5-6bf51557efb8",
-//   };
+  if (!chatId || !callbackQueryData) {
+    return;
+  }
 
-//   await bot.sendMessage(chatId, "Activated arbitrage calculation...", {
-//     reply_markup: {
-//       inline_keyboard: [
-//         [{ text: "Подтвердить", callback_data: JSON.stringify(data) }],
-//       ],
-//     },
-//   });
-// });
+  const data = initArbitrageCallbackQueryDataSchema.parse(
+    JSON.parse(callbackQueryData)
+  );
+  const arbitrageData = await arbitrageRepo.getArbitrageData(data);
+  if (arbitrageData.status !== ArbitrageDataStatus.UNCONFIRMED) {
+    await bot.sendMessage(chatId, "Невозможно начать сделку");
+    return;
+  }
 
-// bot.on("callback_query", async (callbackQuery) => {
-//   const chatId = callbackQuery.message?.chat.id;
-//   const callbackQueryData = callbackQuery.data;
+  await emailPublisher.publish(
+    `Код подтверждения для ${arbitrageData.market.symbol}: ${arbitrageData.confirmationCode}`
+  );
+  await bot.sendMessage(
+    chatId,
+    `Отправлен код подтверждения для ${arbitrageData.market.symbol}`
+  );
+});
 
-//   if (!chatId || !callbackQueryData) {
-//     return;
-//   }
-//   const data = initArbitrageCallbackQueryDataSchema.parse(
-//     JSON.parse(callbackQueryData)
-//   );
-//   const arbitrageData = await arbitrageRepo.getArbitrageData(data);
-//   if (arbitrageData.status !== ArbitrageDataStatus.UNCONFIRMED) {
-//     await bot.sendMessage(chatId, "Невозможно начать сделку");
-//     return;
-//   }
+bot.on("text", async (msg) => {
+  const chatId = msg.chat.id;
+  const confirmationCode = msg.text;
+  const callbackQueryData =
+    msg.reply_to_message?.reply_markup?.inline_keyboard[0]?.[0]?.callback_data;
 
-//   await emailPublisher.publish(
-//     `Код подтверждения для ${arbitrageData.market.symbol}: ${arbitrageData.confirmationCode}`
-//   );
-//   await bot.sendMessage(
-//     chatId,
-//     `Отправлен код подтверждения для ${arbitrageData.market.symbol}`
-//   );
-// });
+  if (!confirmationCode || !callbackQueryData) {
+    return;
+  }
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+  const data = initArbitrageCallbackQueryDataSchema.parse(
+    JSON.parse(callbackQueryData)
+  );
+  const arbitrageData = await arbitrageRepo.getArbitrageData(data);
+  if (arbitrageData.status !== ArbitrageDataStatus.UNCONFIRMED) {
+    await bot.sendMessage(
+      chatId,
+      "Стасус сделки изменился: " + arbitrageData.status
+    );
+    return;
+  }
+  if (arbitrageData.confirmationCode !== confirmationCode) {
+    await bot.sendMessage(
+      chatId,
+      `Неправильный код подтверждения для ${arbitrageData.market.symbol}`
+    );
+    return;
+  }
+
+  await arbitrageRepo.updateArbitrageData(data, {
+    status: ArbitrageDataStatus.UNTOUCHED,
+  });
+  await bot.sendMessage(
+    chatId,
+    `Код успешно подтверджен для ${arbitrageData.market.symbol}`
+  );
+});
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -84,6 +106,27 @@ bot.onText(/\/start/, async (msg) => {
 
   arbitrageFinderScript.start();
   await bot.sendMessage(chatId, "Activated arbitrage calculation...");
+});
+
+bot.onText(/\/offers/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== telegramGroupId) {
+    await handleUnwantedRequest(msg);
+    return;
+  }
+
+  const arbitrages = await arbitrageRepo.getArbitrages();
+  const formmattedArbitrages = arbitrages.map((arbitrage) => {
+    const [arbitrageData] = arbitrage.arbitrageData;
+    return {
+      id: arbitrageData?.arbitrageDataId,
+      symbol: arbitrageData?.market.symbol,
+      status: arbitrageData?.status,
+    };
+  });
+  const message = objectFormatter.format(formmattedArbitrages).text;
+  await bot.sendMessage(chatId, message);
 });
 
 bot.onText(/\/stop/, async (msg) => {

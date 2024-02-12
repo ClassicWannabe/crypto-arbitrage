@@ -65,11 +65,15 @@ export class MultiExchangeArbitrageProcessor implements Service {
   }
 
   private filterArbitrages(arbitrages: Arbitrage[]): ProcessableArbitrage[] {
-    return arbitrages.filter(this.isProcessableArbitrage);
+    return arbitrages.filter((arbitrage): arbitrage is ProcessableArbitrage =>
+      this.isProcessableArbitrage(arbitrage)
+    );
   }
 
   private async expireArbitrages(arbitrages: Arbitrage[]) {
-    const expiredArbitrages = arbitrages.filter(this.isExpiredArbitrage);
+    const expiredArbitrages = arbitrages.filter((arbitrage) =>
+      this.isExpiredArbitrage(arbitrage)
+    );
 
     await Promise.all(
       expiredArbitrages.map(async ({ arbitrageDataId }) => {
@@ -329,7 +333,7 @@ export class MultiExchangeArbitrageProcessor implements Service {
       await depositExchange.getDepositAddress(currencyCode);
     this.checkDepositNetwork(depositAddress, networkId);
 
-    await withdrawExchange.withdraw(
+    const transcation = await withdrawExchange.withdraw(
       currencyCode,
       amount,
       depositAddress.address
@@ -343,6 +347,11 @@ export class MultiExchangeArbitrageProcessor implements Service {
       },
       {
         status: newStatus,
+        transactionId: transcation.id,
+        exchanges: {
+          deposit: { address: depositAddress.address },
+          withdraw: { address: transcation.addressFrom ?? undefined },
+        },
       }
     );
 

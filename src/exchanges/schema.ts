@@ -69,6 +69,7 @@ export const orderSchema = z.object({
 });
 
 export const transactionSchema = z.object({
+  id: z.string(),
   addressFrom: z.string().nullish(),
   addressTo: z.string().nullish(),
   type: z.nativeEnum(TransactionType),

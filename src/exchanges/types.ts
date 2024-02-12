@@ -47,7 +47,7 @@ export interface Exchange {
     currencyCode: string,
     amount: number,
     address: string
-  ): Promise<void>;
+  ): Promise<Transcation>;
   getDeposits(): Promise<Transcation[]>;
   getDepositAddress(currencyCode: string): Promise<Address>;
   amountToPrecision(symbol: string, amount: number): number;

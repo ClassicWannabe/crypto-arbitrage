@@ -245,7 +245,13 @@ export abstract class AbstractExchange implements Exchange {
 
   @retryOnError()
   async withdraw(currencyCode: string, amount: number, address: string) {
-    await this.exchange.withdraw(currencyCode, amount, address);
+    const transaction = await this.exchange.withdraw(
+      currencyCode,
+      amount,
+      address
+    );
+
+    return transactionSchema.parse(transaction);
   }
 
   @retryOnError()
