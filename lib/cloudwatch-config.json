@@ -15,34 +15,5 @@
         ]
       }
     }
-  },
-  "metrics": {
-    "aggregation_dimensions": [["InstanceId"]],
-    "metrics_collected": {
-      "cpu": {
-        "measurement": [
-          "cpu_usage_idle",
-          "cpu_usage_iowait",
-          "cpu_usage_user",
-          "cpu_usage_system"
-        ],
-        "resources": ["*"],
-        "totalcpu": false
-      },
-      "disk": {
-        "measurement": ["used_percent", "inodes_free"],
-        "resources": ["*"]
-      },
-      "diskio": {
-        "measurement": ["io_time"],
-        "resources": ["*"]
-      },
-      "mem": {
-        "measurement": ["mem_used_percent"]
-      },
-      "swap": {
-        "measurement": ["swap_used_percent"]
-      }
-    }
   }
 }
