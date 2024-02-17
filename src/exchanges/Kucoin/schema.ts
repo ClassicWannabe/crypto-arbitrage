@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   networkSchema as commonNetworkSchema,
-  currencySchema as commonCurrencySchema,
+  commonCurrencySchema,
 } from "../schema.js";
 import { Networks } from "../types.js";
 

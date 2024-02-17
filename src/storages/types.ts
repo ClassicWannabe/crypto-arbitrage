@@ -21,27 +21,36 @@ export type DeepPartialArbitrageConfig = z.infer<
 >;
 export type RateLimits = z.infer<typeof rateLimitsSchema>;
 
-export enum ArbitrageDataStatus {
-  UNCONFIRMED = "UNCONFIRMED",
-  PROCESSED = "PROCESSED",
-  PROCESSING = "PROCESSING",
-  UNTOUCHED = "UNTOUCHED",
-  FAILED = "FAILED",
-  CANCELLED = "CANCELLED",
-  EXPIRED = "EXPIRED",
-}
 export enum ArbitrageStepType {
   TRADE = "TRADE",
   WITHDRAW = "WITHDRAW",
 }
-export enum ArbitrageStepStatus {
-  PROCESSED = ArbitrageDataStatus.PROCESSED,
-  PROCESSING = ArbitrageDataStatus.PROCESSING,
-  UNTOUCHED = ArbitrageDataStatus.UNTOUCHED,
-  FAILED = ArbitrageDataStatus.FAILED,
-  CANCELLED = ArbitrageDataStatus.CANCELLED,
-  EXPIRED = ArbitrageDataStatus.EXPIRED,
-}
+
+export const ArbitrageDataStatus = {
+  UNCONFIRMED: "UNCONFIRMED",
+  PROCESSED: "PROCESSED",
+  PROCESSING: "PROCESSING",
+  UNTOUCHED: "UNTOUCHED",
+  FAILED: "FAILED",
+  CANCELLED: "CANCELLED",
+  EXPIRED: "EXPIRED",
+} as const;
+
+export type ArbitrageDataStatus =
+  (typeof ArbitrageDataStatus)[keyof typeof ArbitrageDataStatus];
+
+export const ArbitrageStepStatus = {
+  PROCESSED: "PROCESSED",
+  PROCESSING: "PROCESSING",
+  UNTOUCHED: "UNTOUCHED",
+  FAILED: "FAILED",
+  CANCELLED: "CANCELLED",
+  EXPIRED: "EXPIRED",
+} as const;
+
+export type ArbitrageStepStatus =
+  (typeof ArbitrageStepStatus)[keyof typeof ArbitrageStepStatus];
+
 export enum EntityType {
   ARBITRAGE_DATA = "ARBITRAGE_DATA",
   TRADE_STEP = "TRADE_STEP",

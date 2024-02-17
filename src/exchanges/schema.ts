@@ -14,7 +14,7 @@ export const marketSchema = z.object({
 export const marketsSchema = z.record(z.string(), marketSchema);
 
 export const networkSchema = z.object({
-  network: z.string(),
+  network: z.string().default("undefined"),
   active: z.boolean().nullish(),
   deposit: z.boolean().nullish(),
   withdraw: z.boolean().nullish(),
@@ -23,7 +23,7 @@ export const networkSchema = z.object({
 
 export const networksSchema = z.record(z.string(), networkSchema);
 
-export const currencySchema = z.object({
+export const commonCurrencySchema = z.object({
   code: z.string(),
   active: z.boolean(),
   deposit: z.boolean().nullish(),
@@ -31,6 +31,22 @@ export const currencySchema = z.object({
   fee: z.number().nullish(),
   networks: networksSchema,
 });
+
+const binanceCurrencySchema = z.object({
+  ...commonCurrencySchema.shape,
+  networks: z.array(networkSchema).transform((networks) =>
+    networks.reduce((result: z.infer<typeof networksSchema>, item) => {
+      result[item.network] = item;
+
+      return result;
+    }, {})
+  ),
+});
+
+export const currencySchema = z.union([
+  commonCurrencySchema,
+  binanceCurrencySchema,
+]);
 
 export const currenciesSchema = z.record(z.string(), currencySchema);
 

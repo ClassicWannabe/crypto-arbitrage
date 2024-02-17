@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  Currency as CcxtCurrency,
+  Dictionary as CcxtDictionary,
+  Market as CcxtMarket,
+} from "ccxt";
 
 import {
   marketSchema,
@@ -21,8 +26,10 @@ export interface Exchange {
   readonly id: string;
   reloadMarkets(): Promise<void>;
   getMarkets(): Promise<Markets>;
+  getRawMarkets(): Promise<CcxtDictionary<CcxtMarket>>;
   getMarket(symbol: string, isActive?: boolean): Promise<Market | null>;
   getCurrencies(): Promise<Currencies>;
+  getRawCurrencies(): Promise<CcxtDictionary<CcxtCurrency>>;
   getCurrency(code: string, isActive?: boolean): Promise<Currency | null>;
   getNetworks(currencyCode: string, isActive?: boolean): Promise<Networks>;
   getOrderBook(symbol: string, limit?: number): Promise<OrderBook | null>;
@@ -53,6 +60,8 @@ export interface Exchange {
   amountToPrecision(symbol: string, amount: number): number;
   priceToPrecision(symbol: string, price: number): number;
   costToPrecision(symbol: string, cost: number): number;
+  setRawMarkets(markets: CcxtDictionary<CcxtMarket>, currencies: CcxtDictionary<CcxtCurrency>): void;
+  set rawCurrencies(currencies: CcxtDictionary<CcxtCurrency>);
   // currencyToPrecision(currencyCode: string, amount: number): number;
 }
 

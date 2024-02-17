@@ -1,11 +1,11 @@
 import ccxt from "ccxt";
 
-import { ENV } from "./consts.js";
+import { ENV, ENV_NAMES } from "./consts.js";
 import { logger } from "./logger/logger.js";
 import { RateLimits } from "./storages/types.js";
 
 export const getEnv = (name: keyof typeof ENV): string => {
-  const envVar = ENV[name];
+  const envVar = ENV[name] ?? process.env[ENV_NAMES[name]];
 
   if (!envVar) {
     throw new Error(`Could not find env variable: ${name}`);

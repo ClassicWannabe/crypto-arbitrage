@@ -12,15 +12,27 @@ import { ArbitrageDataEntity } from "../ddb/entities/ArbitrageDataEntity.js";
 import { TradeStepEntity } from "../ddb/entities/TradeStepEntity.js";
 import { WithdrawStepEntity } from "../ddb/entities/WithdrawStepEntity.js";
 
+type a = (typeof ArbitrageDataStatus)[keyof typeof ArbitrageDataStatus];
 export class ArbitrageRepo {
   private readonly table = DdbTableSingleton.getTable();
 
   async getArbitrages(): Promise<ArbitrageCollection[]> {
     const arbitrages = await this.table.entities.arbitrageData.scan
-      .where(
-        ({ status }, { eq }) =>
-          `${eq(status, ArbitrageDataStatus.UNTOUCHED)} OR ${eq(status, ArbitrageDataStatus.PROCESSING)} OR ${eq(status, ArbitrageDataStatus.UNCONFIRMED)}`
-      )
+      .where(({ status }, { eq }) => {
+        const untouchedStatus = eq(
+          status,
+          ArbitrageDataStatus.UNTOUCHED as ArbitrageDataStatus
+        );
+        const processingStatus = eq(
+          status,
+          ArbitrageDataStatus.PROCESSING as ArbitrageDataStatus
+        );
+        const unconfirmedStatus = eq(
+          status,
+          ArbitrageDataStatus.UNCONFIRMED as ArbitrageDataStatus
+        );
+        return `${untouchedStatus} OR ${processingStatus} OR ${unconfirmedStatus}`;
+      })
       .go({ pages: "all" });
 
     return await Promise.all(

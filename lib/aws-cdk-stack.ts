@@ -6,8 +6,19 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as customResources from "aws-cdk-lib/custom-resources";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as events from "aws-cdk-lib/aws-events";
+import * as eventsTargets from "aws-cdk-lib/aws-events-targets";
 import { Construct } from "constructs";
 import { readFileSync } from "fs";
+import path from "path";
+import url from "url";
+import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
+import dotenv from "dotenv";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
+
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const EMAIL_SUBSCRIPTIONS = [
   "ryeleussinov@gmail.com",
@@ -15,6 +26,7 @@ const EMAIL_SUBSCRIPTIONS = [
 ];
 
 export class CryptoArbitrageStack extends cdk.Stack {
+  // private bucket: s3.Bucket;
   private snsTopic: sns.Topic;
   private snsTopicArnParameter: ssm.StringParameter;
   private cloudwatchConfigParameter: ssm.StringParameter;
@@ -27,6 +39,8 @@ export class CryptoArbitrageStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // this.createBucket();
+    // this.createMarketLoaderLambda();
     this.createSnsTopic();
     this.createDdbTable();
     this.createParameters();
@@ -35,6 +49,75 @@ export class CryptoArbitrageStack extends cdk.Stack {
     this.createInstance();
     this.createInstanceRebootCustomResources();
   }
+
+  // private createBucket() {
+  //   const bucket = new s3.Bucket(this, "exchange-markets-bucket", {
+  //     versioned: false,
+  //     removalPolicy: cdk.RemovalPolicy.DESTROY,
+  //   });
+
+  //   this.bucket = bucket;
+  // }
+
+  // private createMarketLoaderLambda() {
+  //   const role = new iam.Role(this, "market-loader-lambda-role", {
+  //     assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+  //     managedPolicies: [
+  //       iam.ManagedPolicy.fromAwsManagedPolicyName(
+  //         "service-role/AWSLambdaBasicExecutionRole"
+  //       ),
+  //     ],
+  //     inlinePolicies: {
+  //       parameterStore: new iam.PolicyDocument({
+  //         statements: [
+  //           new iam.PolicyStatement({
+  //             actions: ["ssm:DescribeParameters"],
+  //             resources: ["*"],
+  //           }),
+  //           new iam.PolicyStatement({
+  //             actions: ["ssm:GetParameters", "ssm:GetParameter"],
+  //             resources: [
+  //               "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
+  //             ],
+  //           }),
+  //         ],
+  //       }),
+  //     },
+  //   });
+  //   this.bucket.grantReadWrite(role);
+  //   const marketLoaderLambda = new NodejsFunction(
+  //     this,
+  //     "market-loader-lambda",
+  //     {
+  //       role,
+  //       handler: "main",
+  //       entry: path.resolve(__dirname, "../src/scripts/runMarketLoader.ts"),
+  //       timeout: cdk.Duration.minutes(2),
+  //       runtime: lambda.Runtime.NODEJS_20_X,
+  //       memorySize: 512,
+  //       bundling: {
+  //         tsconfig: path.resolve(__dirname, "../tsconfig.json"),
+  //         format: OutputFormat.ESM,
+  //         sourceMap: true,
+  //         banner:
+  //           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+  //       },
+  //       environment: {
+  //         AWS_S3_BUCKET_NAME: this.bucket.bucketName,
+  //         ENV_PARAMETER_NAME: "/crypto-arbitrage/env",
+  //       },
+  //       logRetention: RetentionDays.ONE_WEEK,
+  //     }
+  //   );
+
+  //   const eventRule = new events.Rule(this, "10-minute-rule-event-bridge", {
+  //     schedule: events.Schedule.rate(cdk.Duration.minutes(10)),
+  //   });
+
+  //   eventRule.addTarget(
+  //     new eventsTargets.LambdaFunction(marketLoaderLambda, { retryAttempts: 1 })
+  //   );
+  // }
 
   private createSnsTopic() {
     const snsTopic = new sns.Topic(this, "confirmation-code-sender-sns");
@@ -77,7 +160,7 @@ export class CryptoArbitrageStack extends cdk.Stack {
     this.snsTopicArnParameter = snsTopicParameter;
 
     const cloudwatchConfig = readFileSync(
-      "./lib/cloudwatch-config.json",
+      path.resolve(__dirname, "./cloudwatch-config.json"),
       "utf-8"
     );
     const cloudwatchConfigParameter = new ssm.StringParameter(
@@ -90,7 +173,10 @@ export class CryptoArbitrageStack extends cdk.Stack {
     );
     this.cloudwatchConfigParameter = cloudwatchConfigParameter;
 
-    const codeUpdateScript = readFileSync("./lib/code-update.sh", "utf-8");
+    const codeUpdateScript = readFileSync(
+      path.resolve(__dirname, "./code-update.sh"),
+      "utf-8"
+    );
     const codeUpdateScriptParameter = new ssm.StringParameter(
       this,
       "code-update-script-parameter",
@@ -103,14 +189,13 @@ export class CryptoArbitrageStack extends cdk.Stack {
   }
 
   private createInstanceRebootCustomResources() {
-    const rebootEC2Code = readFileSync("./lib/rebootEC2.js", "utf-8");
     const rebootFunction = new lambda.Function(
       this,
       "reboot-instance-function",
       {
         runtime: lambda.Runtime.NODEJS_20_X,
-        handler: "index.handler",
-        code: lambda.Code.fromInline(rebootEC2Code),
+        handler: "rebootEC2.handler",
+        code: lambda.Code.fromAsset(path.resolve(__dirname, "./rebootEC2")),
         timeout: cdk.Duration.seconds(60),
         environment: {
           INSTANCE_ID: this.instance.instanceId,
@@ -247,7 +332,10 @@ export class CryptoArbitrageStack extends cdk.Stack {
       securityGroup,
     });
 
-    const userDataScript = readFileSync("./lib/user-data.sh", "utf8");
+    const userDataScript = readFileSync(
+      path.resolve(__dirname, "./user-data.sh"),
+      "utf8"
+    );
 
     instance.addUserData(userDataScript);
 

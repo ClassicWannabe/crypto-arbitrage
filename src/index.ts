@@ -27,7 +27,7 @@ const arbitrageRepo = new ArbitrageRepo();
 const emailPublisher = new EmailPublisher();
 
 const arbitrageFinderScript = new ScriptRunner(Script.ARBITRAGE_FINDER);
-const arbitrageProcessorScript = new ScriptRunner(Script.ARBITRAGE_PROCESSOR);
+// const arbitrageProcessorScript = new ScriptRunner(Script.ARBITRAGE_PROCESSOR);
 
 bot.on("callback_query", async (callbackQuery) => {
   const chatId = callbackQuery.message?.chat.id;

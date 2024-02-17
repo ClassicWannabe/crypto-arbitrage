@@ -1,4 +1,9 @@
-import { Exchange as CcxtExchange, NetworkError, RequestTimeout } from "ccxt";
+import {
+  Exchange as CcxtExchange,
+  Currency as CcxtCurrency,
+  Dictionary as CcxtDictionary,
+  Market as CcxtMarket,
+} from "ccxt";
 import { isNil } from "lodash-es";
 import { z } from "zod";
 
@@ -43,6 +48,11 @@ export abstract class AbstractExchange implements Exchange {
   }
 
   @retryOnError()
+  async getRawMarkets() {
+    return await this.exchange.loadMarkets();
+  }
+
+  @retryOnError()
   async getMarket(symbol: string, isActive?: boolean) {
     const markets = await this.exchange.loadMarkets();
     const market = markets[symbol];
@@ -62,6 +72,12 @@ export abstract class AbstractExchange implements Exchange {
     const currencies = this.exchange.currencies;
 
     return currenciesSchema.parse(currencies);
+  }
+
+  @retryOnError()
+  async getRawCurrencies() {
+    await this.exchange.loadMarkets();
+    return this.exchange.currencies;
   }
 
   @retryOnError()
@@ -305,6 +321,17 @@ export abstract class AbstractExchange implements Exchange {
       logger.warn({ symbol, cost, exchange: this.exchange.id });
     }
     return cost;
+  }
+
+  setRawMarkets(
+    markets: CcxtDictionary<CcxtMarket>,
+    currencies: CcxtDictionary<CcxtCurrency>
+  ) {
+    this.exchange.setMarkets(Object.values(markets), currencies);
+  }
+
+  set rawCurrencies(currencies: CcxtDictionary<CcxtCurrency>) {
+    this.exchange.currencies = currencies;
   }
 
   // TODO: investigate results

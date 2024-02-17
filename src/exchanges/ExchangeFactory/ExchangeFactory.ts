@@ -2,7 +2,6 @@ import ccxt from "ccxt";
 
 import { ArbitrageConfig } from "../../storages/types.js";
 import { Exchange, ExchangeType } from "../types.js";
-import { ENV } from "../../consts.js";
 import { Binance } from "../Binance/Binance.js";
 import { Bybit } from "../Bybit/Bybit.js";
 import { GateIO } from "../GateIO/GateIO.js";
@@ -11,97 +10,104 @@ import { Kucoin } from "../Kucoin/Kucoin.js";
 import { OKX } from "../OKX/OKX.js";
 import { MEXC } from "../MEXC/MEXC.js";
 import { BitGet } from "../BitGet/BitGet.js";
+import { getEnv } from "../../helpers.js";
 
 export class ExchangeFactory {
-  constructor(private readonly arbitrageConfig: ArbitrageConfig) {}
+  constructor(private readonly arbitrageConfig?: ArbitrageConfig) {}
 
   getExchange(type: ExchangeType): Exchange {
-    const { rateLimits, timeout } = this.arbitrageConfig;
+    const { rateLimits, timeout } = this.arbitrageConfig ?? {};
 
     switch (type) {
       case ExchangeType.BINANCE: {
         const ccxtBinance = new ccxt.binance({
-          apiKey: ENV.binanceApiKey,
-          secret: ENV.binanceApiSecret,
+          apiKey: getEnv("binanceApiKey"),
+          secret: getEnv("binanceApiSecret"),
         });
-        ccxtBinance.rateLimit = rateLimits.binance ?? ccxtBinance.rateLimit;
-        ccxtBinance.timeout = timeout;
+        ccxtBinance.rateLimit = rateLimits?.binance ?? ccxtBinance.rateLimit;
+        ccxtBinance.timeout = timeout ?? ccxtBinance.timeout;
 
         return new Binance(ccxtBinance);
       }
       case ExchangeType.BYBIT: {
         const ccxtBybit = new ccxt.bybit({
-          apiKey: ENV.bybitApiKey,
-          secret: ENV.bybitApiSecret,
+          apiKey: getEnv("bybitApiKey"),
+          secret: getEnv("bybitApiSecret"),
         });
-        ccxtBybit.rateLimit = rateLimits.bybit ?? ccxtBybit.rateLimit;
-        ccxtBybit.timeout = timeout;
+        ccxtBybit.rateLimit = rateLimits?.bybit ?? ccxtBybit.rateLimit;
+        ccxtBybit.timeout = timeout ?? ccxtBybit.timeout;
 
         return new Bybit(ccxtBybit);
       }
       case ExchangeType.GATEIO: {
         const ccxtGateio = new ccxt.gateio({
-          apiKey: ENV.gateioApiKey,
-          secret: ENV.gateioApiSecret,
+          apiKey: getEnv("gateioApiKey"),
+          secret: getEnv("gateioApiSecret"),
         });
-        ccxtGateio.rateLimit = rateLimits.gateio ?? ccxtGateio.rateLimit;
-        ccxtGateio.timeout = timeout;
+        ccxtGateio.rateLimit = rateLimits?.gateio ?? ccxtGateio.rateLimit;
+        ccxtGateio.timeout = timeout ?? ccxtGateio.timeout;
 
         return new GateIO(ccxtGateio);
       }
       case ExchangeType.HTX: {
         const ccxtHtx = new ccxt.htx({
-          apiKey: ENV.htxApiKey,
-          secret: ENV.htxApiSecret,
+          apiKey: getEnv("htxApiKey"),
+          secret: getEnv("htxApiSecret"),
         });
-        ccxtHtx.rateLimit = rateLimits.htx ?? ccxtHtx.rateLimit;
-        ccxtHtx.timeout = timeout;
+        ccxtHtx.rateLimit = rateLimits?.htx ?? ccxtHtx.rateLimit;
+        ccxtHtx.timeout = timeout ?? ccxtHtx.timeout;
 
         return new HTX(ccxtHtx);
       }
       case ExchangeType.KUCOIN: {
         const ccxtKucoin = new ccxt.kucoin({
-          apiKey: ENV.kucoinApiKey,
-          secret: ENV.kucoinApiSecret,
-          password: ENV.kucoinApiPassword,
+          apiKey: getEnv("kucoinApiKey"),
+          secret: getEnv("kucoinApiSecret"),
+          password: getEnv("kucoinApiPassword"),
         });
-        ccxtKucoin.rateLimit = rateLimits.kucoin ?? ccxtKucoin.rateLimit;
-        ccxtKucoin.timeout = timeout;
+        ccxtKucoin.rateLimit = rateLimits?.kucoin ?? ccxtKucoin.rateLimit;
+        ccxtKucoin.timeout = timeout ?? ccxtKucoin.timeout;
 
         return new Kucoin(ccxtKucoin);
       }
       case ExchangeType.OKX: {
         const ccxtOkx = new ccxt.okx({
-          apiKey: ENV.okxApiKey,
-          secret: ENV.okxApiSecret,
-          password: ENV.okxApiPassword,
+          apiKey: getEnv("okxApiKey"),
+          secret: getEnv("okxApiSecret"),
+          password: getEnv("okxApiPassword"),
         });
-        ccxtOkx.rateLimit = rateLimits.okx ?? ccxtOkx.rateLimit;
-        ccxtOkx.timeout = timeout;
+        ccxtOkx.rateLimit = rateLimits?.okx ?? ccxtOkx.rateLimit;
+        ccxtOkx.timeout = timeout ?? ccxtOkx.timeout;
 
         return new OKX(ccxtOkx);
       }
       case ExchangeType.MEXC: {
         const ccxtMexc = new ccxt.mexc({
-          apiKey: ENV.mexcApiKey,
-          secret: ENV.mexcApiSecret,
+          apiKey: getEnv("mexcApiKey"),
+          secret: getEnv("mexcApiSecret"),
         });
-        ccxtMexc.rateLimit = rateLimits.mexc ?? ccxtMexc.rateLimit;
-        ccxtMexc.timeout = timeout;
+        ccxtMexc.rateLimit = rateLimits?.mexc ?? ccxtMexc.rateLimit;
+        ccxtMexc.timeout = timeout ?? ccxtMexc.timeout;
 
         return new MEXC(ccxtMexc);
       }
       case ExchangeType.BITGET: {
         const ccxtBitget = new ccxt.bitget({
-          apiKey: ENV.bitgetApiKey,
-          secret: ENV.bitgetApiSecret,
-          password: ENV.bitgetApiPassword,
+          apiKey: getEnv("bitgetApiKey"),
+          secret: getEnv("bitgetApiSecret"),
+          password: getEnv("bitgetApiPassword"),
         });
-        ccxtBitget.rateLimit = rateLimits.mexc ?? ccxtBitget.rateLimit;
-        ccxtBitget.timeout = timeout;
+        ccxtBitget.rateLimit = rateLimits?.mexc ?? ccxtBitget.rateLimit;
+        ccxtBitget.timeout = timeout ?? ccxtBitget.timeout;
 
         return new BitGet(ccxtBitget);
       }
     }
+  }
+
+  getAllExchanges(): Exchange[] {
+    return Object.values(ExchangeType).map((exchangeType) =>
+      this.getExchange(exchangeType)
+    );
   }
 }

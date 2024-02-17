@@ -3,6 +3,9 @@
 # Stop the app
 forever stopall
 
+# Update CloudWatch config
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:/crypto-arbitrage/cloudwatch-config
+
 # Update the code
 cd ~/arbitrage-app
 git pull
