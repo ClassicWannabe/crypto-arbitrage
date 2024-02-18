@@ -1,10 +1,14 @@
 import { Balance, Exchange, Order } from "../../../../exchanges/types.js";
+import { logger } from "../../../../logger/logger.js";
 import { ArbitrageRepo } from "../../../../storages/ArbitrageRepo/ArbitrageRepo.js";
 import {
   ArbitrageData,
   TradeArbitrageStep,
 } from "../../../../storages/ddb/types.js";
-import { ArbitrageStepStatus } from "../../../../storages/types.js";
+import {
+  ArbitrageDataStatus,
+  ArbitrageStepStatus,
+} from "../../../../storages/types.js";
 import { TradeOperation } from "../../../../types.js";
 import { Strategy } from "../../Strategy.js";
 
@@ -19,15 +23,31 @@ export class UntouchedStatusStrategy extends Strategy {
   }
 
   async process() {
-    const balance = await this.exchange.getBalance();
-    let order: Order;
-    if (this.tradeStep.tradeOperation === TradeOperation.BUY) {
-      order = await this.processBuyOperation(balance);
-    } else {
-      order = await this.processSellOperation(balance);
+    try {
+      return await this.processStep();
+    } catch (e) {
+      const error = e as Error;
+      logger.error("Failed to process UNTOUCHED trade step", {
+        error: error.stack,
+      });
+
+      return ArbitrageDataStatus.FAILED;
     }
+  }
+
+  private async processStep() {
+    const balance = await this.exchange.getBalance();
+    const order = await this.processTradeOperation(balance);
 
     return await this.updateStepDetails(order);
+  }
+
+  private async processTradeOperation(balance: Balance) {
+    if (this.tradeStep.tradeOperation === TradeOperation.BUY) {
+      return await this.processBuyOperation(balance);
+    } else {
+      return await this.processSellOperation(balance);
+    }
   }
 
   private async processBuyOperation(balance: Balance): Promise<Order> {

@@ -1,5 +1,5 @@
 import { FeeCalculator } from "./FeeCalculator.js";
-import { MockOf } from "../../__utils__/utils.js";
+import { MockOf } from "../../__utils__/utils.spec.js";
 import { Exchange } from "../../exchanges/types.js";
 import { FeeType } from "../../types.js";
 
