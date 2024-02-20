@@ -26,7 +26,7 @@ export interface Exchange {
   readonly id: string;
   reloadMarkets(): Promise<void>;
   getMarkets(): Promise<Markets>;
-  getRawMarkets(): Promise<CcxtDictionary<CcxtMarket>>;
+  getRawMarkets(): Promise<CcxtMarket[]>;
   getMarket(symbol: string, isActive?: boolean): Promise<Market | null>;
   getCurrencies(): Promise<Currencies>;
   getRawCurrencies(): Promise<CcxtDictionary<CcxtCurrency>>;
@@ -60,7 +60,10 @@ export interface Exchange {
   amountToPrecision(symbol: string, amount: number): number;
   priceToPrecision(symbol: string, price: number): number;
   costToPrecision(symbol: string, cost: number): number;
-  setRawMarkets(markets: CcxtDictionary<CcxtMarket>, currencies: CcxtDictionary<CcxtCurrency>): void;
+  setRawMarkets(
+    markets: CcxtMarket[],
+    currencies: CcxtDictionary<CcxtCurrency>
+  ): void;
   set rawCurrencies(currencies: CcxtDictionary<CcxtCurrency>);
   // currencyToPrecision(currencyCode: string, amount: number): number;
 }

@@ -26,7 +26,7 @@ const EMAIL_SUBSCRIPTIONS = [
 ];
 
 export class CryptoArbitrageStack extends cdk.Stack {
-  // private bucket: s3.Bucket;
+  private bucket: s3.Bucket;
   private snsTopic: sns.Topic;
   private snsTopicArnParameter: ssm.StringParameter;
   private cloudwatchConfigParameter: ssm.StringParameter;
@@ -39,8 +39,8 @@ export class CryptoArbitrageStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // this.createBucket();
-    // this.createMarketLoaderLambda();
+    this.createBucket();
+    this.createMarketLoaderLambda();
     this.createSnsTopic();
     this.createDdbTable();
     this.createParameters();
@@ -50,74 +50,74 @@ export class CryptoArbitrageStack extends cdk.Stack {
     this.createInstanceRebootCustomResources();
   }
 
-  // private createBucket() {
-  //   const bucket = new s3.Bucket(this, "exchange-markets-bucket", {
-  //     versioned: false,
-  //     removalPolicy: cdk.RemovalPolicy.DESTROY,
-  //   });
+  private createBucket() {
+    const bucket = new s3.Bucket(this, "exchange-markets-bucket", {
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
-  //   this.bucket = bucket;
-  // }
+    this.bucket = bucket;
+  }
 
-  // private createMarketLoaderLambda() {
-  //   const role = new iam.Role(this, "market-loader-lambda-role", {
-  //     assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-  //     managedPolicies: [
-  //       iam.ManagedPolicy.fromAwsManagedPolicyName(
-  //         "service-role/AWSLambdaBasicExecutionRole"
-  //       ),
-  //     ],
-  //     inlinePolicies: {
-  //       parameterStore: new iam.PolicyDocument({
-  //         statements: [
-  //           new iam.PolicyStatement({
-  //             actions: ["ssm:DescribeParameters"],
-  //             resources: ["*"],
-  //           }),
-  //           new iam.PolicyStatement({
-  //             actions: ["ssm:GetParameters", "ssm:GetParameter"],
-  //             resources: [
-  //               "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
-  //             ],
-  //           }),
-  //         ],
-  //       }),
-  //     },
-  //   });
-  //   this.bucket.grantReadWrite(role);
-  //   const marketLoaderLambda = new NodejsFunction(
-  //     this,
-  //     "market-loader-lambda",
-  //     {
-  //       role,
-  //       handler: "main",
-  //       entry: path.resolve(__dirname, "../src/scripts/runMarketLoader.ts"),
-  //       timeout: cdk.Duration.minutes(2),
-  //       runtime: lambda.Runtime.NODEJS_20_X,
-  //       memorySize: 512,
-  //       bundling: {
-  //         tsconfig: path.resolve(__dirname, "../tsconfig.json"),
-  //         format: OutputFormat.ESM,
-  //         sourceMap: true,
-  //         banner:
-  //           "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-  //       },
-  //       environment: {
-  //         AWS_S3_BUCKET_NAME: this.bucket.bucketName,
-  //         ENV_PARAMETER_NAME: "/crypto-arbitrage/env",
-  //       },
-  //       logRetention: RetentionDays.ONE_WEEK,
-  //     }
-  //   );
+  private createMarketLoaderLambda() {
+    const role = new iam.Role(this, "market-loader-lambda-role", {
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "service-role/AWSLambdaBasicExecutionRole"
+        ),
+      ],
+      inlinePolicies: {
+        parameterStore: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: ["ssm:DescribeParameters"],
+              resources: ["*"],
+            }),
+            new iam.PolicyStatement({
+              actions: ["ssm:GetParameters", "ssm:GetParameter"],
+              resources: [
+                "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
+              ],
+            }),
+          ],
+        }),
+      },
+    });
+    this.bucket.grantReadWrite(role);
+    const marketLoaderLambda = new NodejsFunction(
+      this,
+      "market-loader-lambda",
+      {
+        role,
+        handler: "main",
+        entry: path.resolve(__dirname, "../src/scripts/runMarketLoader.ts"),
+        timeout: cdk.Duration.minutes(2),
+        runtime: lambda.Runtime.NODEJS_20_X,
+        memorySize: 512,
+        bundling: {
+          tsconfig: path.resolve(__dirname, "../tsconfig.json"),
+          format: OutputFormat.ESM,
+          sourceMap: true,
+          banner:
+            "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+        },
+        environment: {
+          AWS_S3_BUCKET_NAME: this.bucket.bucketName,
+          ENV_PARAMETER_NAME: "/crypto-arbitrage/env",
+        },
+        logRetention: RetentionDays.ONE_WEEK,
+      }
+    );
 
-  //   const eventRule = new events.Rule(this, "10-minute-rule-event-bridge", {
-  //     schedule: events.Schedule.rate(cdk.Duration.minutes(10)),
-  //   });
+    const eventRule = new events.Rule(this, "10-minute-rule-event-bridge", {
+      schedule: events.Schedule.rate(cdk.Duration.minutes(10)),
+    });
 
-  //   eventRule.addTarget(
-  //     new eventsTargets.LambdaFunction(marketLoaderLambda, { retryAttempts: 1 })
-  //   );
-  // }
+    eventRule.addTarget(
+      new eventsTargets.LambdaFunction(marketLoaderLambda, { retryAttempts: 1 })
+    );
+  }
 
   private createSnsTopic() {
     const snsTopic = new sns.Topic(this, "confirmation-code-sender-sns");

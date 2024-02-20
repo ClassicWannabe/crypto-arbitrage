@@ -49,7 +49,7 @@ export abstract class AbstractExchange implements Exchange {
 
   @retryOnError()
   async getRawMarkets() {
-    return await this.exchange.loadMarkets();
+    return await this.exchange.fetchMarkets();
   }
 
   @retryOnError()
@@ -324,10 +324,10 @@ export abstract class AbstractExchange implements Exchange {
   }
 
   setRawMarkets(
-    markets: CcxtDictionary<CcxtMarket>,
+    markets: CcxtMarket[],
     currencies: CcxtDictionary<CcxtCurrency>
   ) {
-    this.exchange.setMarkets(Object.values(markets), currencies);
+    this.exchange.setMarkets(markets, currencies);
   }
 
   set rawCurrencies(currencies: CcxtDictionary<CcxtCurrency>) {

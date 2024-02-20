@@ -10,7 +10,7 @@ import { Bucket } from "../../storages/Bucket/Bucket.js";
 
 type LoadedMarkets = {
   [exchangeId: string]: {
-    markets: CcxtDictionary<CcxtMarket>;
+    markets: CcxtMarket[];
     currencies: CcxtDictionary<CcxtCurrency>;
   };
 };

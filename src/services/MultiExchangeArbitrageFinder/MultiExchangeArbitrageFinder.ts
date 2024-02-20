@@ -28,7 +28,6 @@ export class MultiExchangeArbitrageFinder implements Service {
   async process(): Promise<void> {
     await this.setMinProfitPercent();
     await this.processArbitrages();
-    await this.reloadExchanges();
   }
 
   private async setMinProfitPercent() {
@@ -99,29 +98,5 @@ export class MultiExchangeArbitrageFinder implements Service {
         },
       });
     }
-  }
-
-  private async reloadExchanges() {
-    if (!this.isAnyExchangeShouldBeReloaded()) {
-      return;
-    }
-    await this.calculator.reloadAllExchanges();
-    this.exchangesLastReloadDate = new Date();
-
-    logger.info("Sleep 1 minute after reloading markets...");
-    const sixtySeconds = 60;
-    await sleep(sixtySeconds);
-  }
-
-  private isAnyExchangeShouldBeReloaded(): boolean {
-    const thirtyMinutes = 30;
-
-    const passedTimeInSeconds =
-      (new Date().getTime() - this.exchangesLastReloadDate.getTime()) / 1000;
-    const passedTimeInMinutes = passedTimeInSeconds / 60;
-    if (passedTimeInMinutes > thirtyMinutes) {
-      return true;
-    }
-    return false;
   }
 }
