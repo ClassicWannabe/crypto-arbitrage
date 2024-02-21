@@ -36,8 +36,8 @@ let timestampPointer = new Date().getTime();
 
 const reloadMarkets = async () => {
   const now = Date.now();
-  const tenMinutesInMiliseconds = 10 * 60 * 1000;
-  if (now - timestampPointer < tenMinutesInMiliseconds) {
+  const thirtyMinutesInMiliseconds = 30 * 60 * 1000;
+  if (now - timestampPointer < thirtyMinutesInMiliseconds) {
     return;
   }
 

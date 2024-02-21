@@ -110,8 +110,8 @@ export class CryptoArbitrageStack extends cdk.Stack {
       }
     );
 
-    const eventRule = new events.Rule(this, "10-minute-rule-event-bridge", {
-      schedule: events.Schedule.rate(cdk.Duration.minutes(10)),
+    const eventRule = new events.Rule(this, "30-minute-rule-event-bridge", {
+      schedule: events.Schedule.rate(cdk.Duration.minutes(30)),
     });
 
     eventRule.addTarget(

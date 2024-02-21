@@ -50,10 +50,10 @@ const bucket = new Bucket(s3Client, s3BucketName);
 const marketLoader = new MarketLoader(bucket, exchanges);
 
 const main = async () => {
-  await process();
+  await processTask();
 };
 
-const process = async () => {
+const processTask = async () => {
   const fiveMinInSeconds = 5 * 60;
   let iteration = 1;
   while (true) {
