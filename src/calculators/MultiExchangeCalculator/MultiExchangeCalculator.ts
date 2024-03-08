@@ -259,10 +259,10 @@ export class MultiExchangeCalculator {
       depositExchangeBaseCurrency,
       depositExchangeQuoteCurrency,
     ] = await Promise.all([
-      withdrawExchange.getCurrency(baseCurrencyCode),
-      withdrawExchange.getCurrency(quoteCurrencyCode),
-      depositExchange.getCurrency(baseCurrencyCode),
-      depositExchange.getCurrency(quoteCurrencyCode),
+      withdrawExchange.getCurrency(withdrawExchangeMarketData.base),
+      withdrawExchange.getCurrency(withdrawExchangeMarketData.quote),
+      depositExchange.getCurrency(depositExchangeMarketData.base),
+      depositExchange.getCurrency(depositExchangeMarketData.quote),
     ]);
 
     if (
@@ -271,6 +271,12 @@ export class MultiExchangeCalculator {
       !depositExchangeBaseCurrency ||
       !depositExchangeQuoteCurrency
     ) {
+      logger.error({
+        withdrawExchangeBaseCurrency,
+        withdrawExchangeQuoteCurrency,
+        depositExchangeBaseCurrency,
+        depositExchangeQuoteCurrency,
+      });
       throw new Error("Missing currencies for multi exchange calculation");
     }
 
