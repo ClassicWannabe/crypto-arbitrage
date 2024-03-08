@@ -193,7 +193,7 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatStatusStep(step: StatusStep) {
-    const { coin, profit } = step;
+    const { coin } = step;
     const profitString = this.formatProfit(step);
 
     return `Итого: ${this.formatCoin(coin)}.\n${profitString}\n\n`;
@@ -202,7 +202,7 @@ export class ArbitrageFormatter implements Formatter {
   private formatProfit(step: StatusStep) {
     const { coin, profit } = step;
 
-    return `Прибыль: ${this.formatCoin({ amount: profit.amount, currencyCode: coin.currencyCode })} ~${this.formatNumber(
+    return `Прибыль: ${this.formatCoin({ amount: profit.amount, currencyCode: coin.currencyCode, currencyName: coin.currencyName })} ~${this.formatNumber(
       profit.percent,
       3
     )}%`;
@@ -210,7 +210,7 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatCoin(coin: CurrencyAmount) {
     return this.makeBold(
-      `${this.formatNumber(coin.amount)} ${coin.currencyCode}`
+      `${this.formatNumber(coin.amount)} ${coin.currencyCode} (${coin.currencyName})`
     );
   }
 
