@@ -1,7 +1,6 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { shuffle } from "lodash-es";
-import { S3Client } from "@aws-sdk/client-s3";
 
 import { MultiExchangeCalculator } from "../calculators/MultiExchangeCalculator/MultiExchangeCalculator.js";
 import { logger } from "../logger/logger.js";
@@ -12,8 +11,6 @@ import { MultiExchangeArbitrageFinder } from "../services/MultiExchangeArbitrage
 import { ArbitrageFormatter } from "../formatters/ArbitrageFormatter/ArbitrageFormatter.js";
 import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js";
 import { ArbitrageRepo } from "../storages/ArbitrageRepo/ArbitrageRepo.js";
-import { Bucket } from "../storages/Bucket/Bucket.js";
-import { MarketLoader } from "../services/MarketLoader/MarketLoader.js";
 
 const storage = new FileStorage();
 const arbitrageConfig = await storage.getArbitrageConfig();
@@ -44,10 +41,6 @@ const multiExchangeArbitrageService = new MultiExchangeArbitrageFinder(
   arbitrageConfig.parallelProcessSymbolNumber,
   arbitrageConfig.ignoredSymbols
 );
-const s3Client = new S3Client();
-const s3BucketName = getEnv("s3BucketName");
-const bucket = new Bucket(s3Client, s3BucketName);
-const marketLoader = new MarketLoader(bucket, exchanges);
 
 const main = async () => {
   await processTask();
@@ -59,7 +52,6 @@ const processTask = async () => {
   while (true) {
     try {
       logger.info(`Start arbitrage service. Iteration: ${iteration}`);
-      await marketLoader.populateExchanges();
       await updateSymbols();
       await multiExchangeArbitrageService.process();
       logger.info("Finish arbitrage service...");

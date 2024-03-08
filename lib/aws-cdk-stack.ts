@@ -14,16 +14,10 @@ import { readFileSync } from "fs";
 import path from "path";
 import url from "url";
 import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
-import dotenv from "dotenv";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const EMAIL_SUBSCRIPTIONS = [
-  "ryeleussinov@gmail.com",
-  "zhurinbaev.azamat@gmail.com",
-];
 
 export class CryptoArbitrageStack extends cdk.Stack {
   private bucket: s3.Bucket;
@@ -39,96 +33,16 @@ export class CryptoArbitrageStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    this.createBucket();
-    this.createMarketLoaderLambda();
     this.createSnsTopic();
     this.createDdbTable();
     this.createParameters();
     this.createInstanceRole();
     this.setVpc();
     this.createInstance();
-    this.createInstanceRebootCustomResources();
-  }
-
-  private createBucket() {
-    const bucket = new s3.Bucket(this, "exchange-markets-bucket", {
-      versioned: false,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
-    this.bucket = bucket;
-  }
-
-  private createMarketLoaderLambda() {
-    const role = new iam.Role(this, "market-loader-lambda-role", {
-      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "service-role/AWSLambdaBasicExecutionRole"
-        ),
-      ],
-      inlinePolicies: {
-        parameterStore: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              actions: ["ssm:DescribeParameters"],
-              resources: ["*"],
-            }),
-            new iam.PolicyStatement({
-              actions: ["ssm:GetParameters", "ssm:GetParameter"],
-              resources: [
-                "arn:aws:ssm:eu-central-1:654654636079:parameter/crypto-arbitrage/env",
-              ],
-            }),
-          ],
-        }),
-      },
-    });
-    this.bucket.grantReadWrite(role);
-    const marketLoaderLambda = new NodejsFunction(
-      this,
-      "market-loader-lambda",
-      {
-        role,
-        handler: "main",
-        entry: path.resolve(__dirname, "../src/scripts/runMarketLoader.ts"),
-        timeout: cdk.Duration.minutes(2),
-        runtime: lambda.Runtime.NODEJS_20_X,
-        memorySize: 512,
-        bundling: {
-          tsconfig: path.resolve(__dirname, "../tsconfig.json"),
-          format: OutputFormat.ESM,
-          sourceMap: true,
-          banner:
-            "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-        },
-        environment: {
-          AWS_S3_BUCKET_NAME: this.bucket.bucketName,
-          ENV_PARAMETER_NAME: "/crypto-arbitrage/env",
-        },
-        logRetention: RetentionDays.ONE_WEEK,
-      }
-    );
-
-    const eventRule = new events.Rule(this, "30-minute-rule-event-bridge", {
-      schedule: events.Schedule.rate(cdk.Duration.minutes(30)),
-    });
-
-    eventRule.addTarget(
-      new eventsTargets.LambdaFunction(marketLoaderLambda, { retryAttempts: 1 })
-    );
   }
 
   private createSnsTopic() {
     const snsTopic = new sns.Topic(this, "confirmation-code-sender-sns");
-
-    for (const email of EMAIL_SUBSCRIPTIONS) {
-      new sns.Subscription(this, `email-subscription-${email}`, {
-        topic: snsTopic,
-        protocol: cdk.aws_sns.SubscriptionProtocol.EMAIL,
-        endpoint: email,
-      });
-    }
 
     this.snsTopic = snsTopic;
   }
@@ -186,62 +100,6 @@ export class CryptoArbitrageStack extends cdk.Stack {
       }
     );
     this.codeUpdateScriptParameter = codeUpdateScriptParameter;
-  }
-
-  private createInstanceRebootCustomResources() {
-    const rebootFunction = new lambda.Function(
-      this,
-      "reboot-instance-function",
-      {
-        runtime: lambda.Runtime.NODEJS_20_X,
-        handler: "rebootEC2.handler",
-        code: lambda.Code.fromAsset(path.resolve(__dirname, "./rebootEC2")),
-        timeout: cdk.Duration.seconds(60),
-        environment: {
-          INSTANCE_ID: this.instance.instanceId,
-        },
-      }
-    );
-
-    rebootFunction.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["ec2:RebootInstances"],
-        resources: ["*"],
-      })
-    );
-
-    const customResourceRole = new iam.Role(
-      this,
-      `reboot-instance-custom-resource-role`,
-      {
-        assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
-      }
-    );
-    customResourceRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ["lambda:InvokeFunction"],
-        resources: ["*"],
-      })
-    );
-
-    new customResources.AwsCustomResource(
-      this,
-      "reboot-instance-custom-resource",
-      {
-        onUpdate: {
-          service: "Lambda",
-          action: "invoke",
-          parameters: {
-            FunctionName: rebootFunction.functionArn,
-          },
-          physicalResourceId: customResources.PhysicalResourceId.of(
-            "reboot-resource" + new Date().toISOString()
-          ),
-        },
-        role: customResourceRole,
-      }
-    );
   }
 
   private createInstanceRole() {
