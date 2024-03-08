@@ -23,6 +23,7 @@ import {
 import { FeeType } from "../../types.js";
 import { logger } from "../../logger/logger.js";
 import { retryOnError } from "../decorators.js";
+import { parseValue } from "../../helpers.js";
 
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
@@ -44,7 +45,7 @@ export abstract class AbstractExchange implements Exchange {
   async getMarkets() {
     const markets = await this.exchange.loadMarkets();
 
-    return marketsSchema.parse(markets);
+    return parseValue({ schema: marketsSchema, value: markets });
   }
 
   @retryOnError()
@@ -61,7 +62,7 @@ export abstract class AbstractExchange implements Exchange {
       return null;
     }
 
-    const parsedMarket = marketSchema.parse(market);
+    const parsedMarket = parseValue({ schema: marketSchema, value: market });
 
     return this.getActiveOrInactiveItem(parsedMarket, isActive);
   }
@@ -71,7 +72,7 @@ export abstract class AbstractExchange implements Exchange {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
 
-    return currenciesSchema.parse(currencies);
+    return parseValue({ schema: currenciesSchema, value: currencies });
   }
 
   @retryOnError()
@@ -90,7 +91,10 @@ export abstract class AbstractExchange implements Exchange {
       return null;
     }
 
-    const parsedCurrency = currencySchema.parse(currency);
+    const parsedCurrency = parseValue({
+      schema: currencySchema,
+      value: currency,
+    });
 
     return this.getActiveOrInactiveItem(parsedCurrency, isActive);
   }
@@ -145,7 +149,10 @@ export abstract class AbstractExchange implements Exchange {
       orderBookLimit
     );
 
-    const parsedOrderBook = orderBookSchema.parse(orderBook);
+    const parsedOrderBook = parseValue({
+      schema: orderBookSchema,
+      value: orderBook,
+    });
     const bestBid = parsedOrderBook.bids[0];
     const bestAsk = parsedOrderBook.asks[0];
 
@@ -216,7 +223,7 @@ export abstract class AbstractExchange implements Exchange {
 
     const ticker = await this.exchange.fetchTicker(symbol);
 
-    return tickerSchema.parse(ticker);
+    return parseValue({ schema: tickerSchema, value: ticker });
   }
 
   resetTickerCache(): void {
@@ -227,14 +234,17 @@ export abstract class AbstractExchange implements Exchange {
   async getBalance() {
     const balance = await this.exchange.fetchBalance();
 
-    return balanceSchema.parse(balance);
+    return parseValue(
+      { schema: balanceSchema, value: balance },
+      { message: "Balance parse error" }
+    );
   }
 
   @retryOnError()
   async getOrder(id: string, symbol: string) {
     const order = await this.exchange.fetchOrder(id, symbol);
 
-    return orderSchema.parse(order);
+    return parseValue({ schema: orderSchema, value: order });
   }
 
   @retryOnError()
@@ -245,7 +255,7 @@ export abstract class AbstractExchange implements Exchange {
       price
     );
 
-    return orderSchema.parse(order);
+    return parseValue({ schema: orderSchema, value: order });
   }
 
   @retryOnError()
@@ -256,7 +266,7 @@ export abstract class AbstractExchange implements Exchange {
       price
     );
 
-    return orderSchema.parse(order);
+    return parseValue({ schema: orderSchema, value: order });
   }
 
   @retryOnError()
@@ -267,21 +277,21 @@ export abstract class AbstractExchange implements Exchange {
       address
     );
 
-    return transactionSchema.parse(transaction);
+    return parseValue({ schema: transactionSchema, value: transaction });
   }
 
   @retryOnError()
   async getDeposits() {
     const deposits = await this.exchange.fetchDeposits();
 
-    return transactionSchema.array().parse(deposits);
+    return parseValue({ schema: transactionSchema.array(), value: deposits });
   }
 
   @retryOnError()
   async getDepositAddress(currencyCode: string) {
     const address = await this.exchange.fetchDepositAddress(currencyCode);
 
-    return addressSchema.parse(address);
+    return parseValue({ schema: addressSchema, value: address });
   }
 
   amountToPrecision(symbol: string, amount: number) {
@@ -333,14 +343,4 @@ export abstract class AbstractExchange implements Exchange {
   set rawCurrencies(currencies: CcxtDictionary<CcxtCurrency>) {
     this.exchange.currencies = currencies;
   }
-
-  // TODO: investigate results
-  // currencyToPrecision(currencyCode: string, amount: number) {
-  //   const formattedValue = this.exchange.currencyToPrecision(
-  //     currencyCode,
-  //     amount
-  //   );
-
-  //   return z.number().parse(formattedValue);
-  // }
 }

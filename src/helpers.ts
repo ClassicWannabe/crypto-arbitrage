@@ -3,6 +3,7 @@ import ccxt from "ccxt";
 import { ENV, ENV_NAMES } from "./consts.js";
 import { logger } from "./logger/logger.js";
 import { RateLimits } from "./storages/types.js";
+import { z } from "zod";
 
 export const getEnv = (name: keyof typeof ENV): string => {
   const envVar = ENV[name] ?? process.env[ENV_NAMES[name]];
@@ -53,4 +54,19 @@ export const populateObject = (
   }
   object[key] = populateObject(otherKeys, value);
   return object;
+};
+
+export const parseValue = <TSchema extends z.Schema>(
+  data: { schema: TSchema; value: any },
+  errorExtension?: { message: string }
+): z.infer<TSchema> => {
+  try {
+    return data.schema.parse(data.value);
+  } catch (error) {
+    if (errorExtension) {
+      logger.error(errorExtension.message);
+    }
+    logger.error(data.value);
+    throw error;
+  }
 };
