@@ -2,7 +2,10 @@ import { ArbitrageData } from "../../types.js";
 import { Exchange, Network } from "../../exchanges/types.js";
 import { logger } from "../../logger/logger.js";
 import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
-import { ArbitrageStepsCalculator } from "../ArbitrageStepsCalculator/ArbitrageStepsCalculator.js";
+import {
+  ArbitrageCalculationType,
+  ArbitrageStepsCalculator,
+} from "../ArbitrageStepsCalculator/ArbitrageStepsCalculator.js";
 
 type ExchangePair = { withdrawExchange: Exchange; depositExchange: Exchange };
 
@@ -99,31 +102,43 @@ export class MultiExchangeCalculator {
         quoteCurrencyCommonNetworks,
         withdrawExchangeTicker,
         depositExchangeTicker,
+        withdrawExchangeBaseCurrency,
+        withdrawExchangeQuoteCurrency,
+        depositExchangeBaseCurrency,
+        depositExchangeQuoteCurrency,
       } = initialData;
 
       const feeCalculator = new FeeCalculator();
       const arbitrageStepsCalculator = new ArbitrageStepsCalculator(
         feeCalculator,
         {
-          withdrawExchange,
-          depositExchange,
-          withdrawExchangeOrderBook,
-          depositExchangeOrderBook,
-          withdrawExchangeMarketData,
-          depositExchangeMarketData,
+          withdrawMarketDetails: {
+            exchange: withdrawExchange,
+            marketData: withdrawExchangeMarketData,
+            orderBook: withdrawExchangeOrderBook,
+            ticker: withdrawExchangeTicker,
+            baseCurrency: withdrawExchangeBaseCurrency,
+            quoteCurrency: withdrawExchangeQuoteCurrency,
+          },
+          depositMarketDetails: {
+            exchange: depositExchange,
+            marketData: depositExchangeMarketData,
+            orderBook: depositExchangeOrderBook,
+            ticker: depositExchangeTicker,
+            baseCurrency: depositExchangeBaseCurrency,
+            quoteCurrency: depositExchangeQuoteCurrency,
+          },
           minProfitPercent: this.minProfitPercent,
-          withdrawExchangeTicker,
-          depositExchangeTicker,
         }
       );
       const baseCurrencyCode = withdrawExchangeMarketData.base;
       const quoteCurrencyCode = withdrawExchangeMarketData.quote;
 
       for (const networkPair of baseCurrencyCommonNetworks) {
-        const steps =
-          await arbitrageStepsCalculator.calculateForwardArbitrageSteps(
-            networkPair
-          );
+        const steps = await arbitrageStepsCalculator.calculateArbitrageSteps({
+          ...networkPair,
+          arbitrageCalculationType: ArbitrageCalculationType.FORWARD,
+        });
 
         if (steps) {
           arbitrages.push({
@@ -136,10 +151,10 @@ export class MultiExchangeCalculator {
       }
 
       for (const networkPair of quoteCurrencyCommonNetworks) {
-        const steps =
-          await arbitrageStepsCalculator.calculateReverseArbitrageSteps(
-            networkPair
-          );
+        const steps = await arbitrageStepsCalculator.calculateArbitrageSteps({
+          ...networkPair,
+          arbitrageCalculationType: ArbitrageCalculationType.REVERSE,
+        });
 
         if (steps) {
           arbitrages.push({
@@ -238,6 +253,27 @@ export class MultiExchangeCalculator {
       return null;
     }
 
+    const [
+      withdrawExchangeBaseCurrency,
+      withdrawExchangeQuoteCurrency,
+      depositExchangeBaseCurrency,
+      depositExchangeQuoteCurrency,
+    ] = await Promise.all([
+      withdrawExchange.getCurrency(baseCurrencyCode),
+      withdrawExchange.getCurrency(quoteCurrencyCode),
+      depositExchange.getCurrency(baseCurrencyCode),
+      depositExchange.getCurrency(quoteCurrencyCode),
+    ]);
+
+    if (
+      !withdrawExchangeBaseCurrency ||
+      !withdrawExchangeQuoteCurrency ||
+      !depositExchangeBaseCurrency ||
+      !depositExchangeQuoteCurrency
+    ) {
+      throw new Error("Missing currencies for multi exchange calculation");
+    }
+
     return {
       withdrawExchangeMarketData,
       depositExchangeMarketData,
@@ -247,6 +283,10 @@ export class MultiExchangeCalculator {
       depositExchangeTicker,
       baseCurrencyCommonNetworks,
       quoteCurrencyCommonNetworks,
+      withdrawExchangeBaseCurrency,
+      withdrawExchangeQuoteCurrency,
+      depositExchangeBaseCurrency,
+      depositExchangeQuoteCurrency,
     };
   }
 

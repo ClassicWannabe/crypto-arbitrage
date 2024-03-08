@@ -1,28 +1,69 @@
 import {
+  Currency,
   Exchange,
   Market,
   Network,
   OrderBook,
   Ticker,
 } from "../../exchanges/types.js";
-import { ArbitrageSteps, ExchangeEvent, TradeOperation } from "../../types.js";
+import {
+  ArbitrageSteps,
+  ExchangeEvent,
+  Fee,
+  TradeOperation,
+  TradeStep,
+  WithdrawStep,
+} from "../../types.js";
 import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 
+type MarketDetails = {
+  orderBook: OrderBook;
+  marketData: Market;
+  ticker: Ticker;
+  exchange: Exchange;
+  baseCurrency: Currency;
+  quoteCurrency: Currency;
+};
 export type CalculateArbitrageStepsParams = {
-  withdrawExchangeOrderBook: OrderBook;
-  depositExchangeOrderBook: OrderBook;
-  withdrawExchangeTicker: Ticker;
-  depositExchangeTicker: Ticker;
-  withdrawExchange: Exchange;
-  depositExchange: Exchange;
-  withdrawExchangeMarketData: Market;
-  depositExchangeMarketData: Market;
+  withdrawMarketDetails: MarketDetails;
+  depositMarketDetails: MarketDetails;
   minProfitPercent: number;
 };
 
-type CalculateParams = {
+type ExchangeNetworks = {
   withdrawNetwork: Network;
   depositNetwork: Network;
+};
+
+export enum ArbitrageCalculationType {
+  FORWARD = "forward",
+  REVERSE = "reverse",
+}
+
+type CalculateParams = ExchangeNetworks & {
+  arbitrageCalculationType: ArbitrageCalculationType;
+};
+
+type CalculateFirstTradeStepParams = {
+  withdrawMarketDetails: MarketDetails;
+  depositMarketDetails: MarketDetails;
+  arbitrageCalculationType: ArbitrageCalculationType;
+};
+
+type CalculateWithdrawStepParams = {
+  withdrawMarketDetails: MarketDetails;
+  depositMarketDetails: MarketDetails;
+  networks: ExchangeNetworks;
+  firstTradeEndAmount: number;
+  withdrawExchangeTradeFee: Fee;
+  arbitrageCalculationType: ArbitrageCalculationType;
+};
+
+type CalculateLastTradeStepParams = {
+  depositMarketDetails: MarketDetails;
+  withdrawAmount: number;
+  withdrawFee: Fee;
+  arbitrageCalculationType: ArbitrageCalculationType;
 };
 
 export class ArbitrageStepsCalculator {
@@ -31,59 +72,49 @@ export class ArbitrageStepsCalculator {
     private readonly params: CalculateArbitrageStepsParams
   ) {}
 
-  async calculateForwardArbitrageSteps({
+  async calculateArbitrageSteps({
     withdrawNetwork,
     depositNetwork,
+    arbitrageCalculationType
   }: CalculateParams): Promise<ArbitrageSteps | null> {
-    const {
-      withdrawExchange,
-      depositExchange,
-      withdrawExchangeOrderBook,
-      depositExchangeOrderBook,
-      withdrawExchangeTicker,
-      depositExchangeTicker,
-      withdrawExchangeMarketData,
-      depositExchangeMarketData,
-    } = this.params;
-    const {
-      symbol,
-      base: baseCurrencyCode,
-      quote: quoteCurrencyCode,
-    } = withdrawExchangeMarketData;
+    const { withdrawMarketDetails, depositMarketDetails } = this.params;
+    const { symbol } = withdrawMarketDetails.marketData;
     const networkName = withdrawNetwork.network;
 
-    const firstTradeEndAmount = Math.min(
-      withdrawExchangeOrderBook.bestAsk.base,
-      depositExchangeOrderBook.bestBid.base
-    ); // base currency
-    const firstTradePrice = withdrawExchangeOrderBook.bestAsk.quote;
-    const firstTradeStartAmount = firstTradeEndAmount * firstTradePrice; // quote currency
+    const firstTradeStep = this.calculateFirstTradeStep({
+      depositMarketDetails,
+      withdrawMarketDetails,
+      arbitrageCalculationType,
+    });
+    const firstTradeEndAmount = firstTradeStep.endCoin.amount;
+    const firstTradeStartAmount = firstTradeStep.startCoin.amount;
 
     const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
       await this.feeCalculator.calculateFees({
-        withdrawExchange: withdrawExchange,
-        depositExchange: depositExchange,
-        currencyCode: baseCurrencyCode,
+        withdrawExchange: withdrawMarketDetails.exchange,
+        depositExchange: depositMarketDetails.exchange,
+        currencyCode: withdrawMarketDetails.marketData.base,
         networkName,
         symbol,
       });
-    const withdrawCurrencyCode = baseCurrencyCode;
-    const rawWithdrawAmount = this.feeCalculator.deductFee(
+
+    const withdrawStep = this.calculateWithdrawStep({
+      arbitrageCalculationType,
       firstTradeEndAmount,
-      withdrawExchangeTradeFee
-    );
-    const withdrawAmount = rawWithdrawAmount;
-    const rawLastTradeStartAmount = this.feeCalculator.deductFee(
-      withdrawAmount,
-      withdrawFee
-    );
-    const lastTradeStartAmount = depositExchange.amountToPrecision(
-      symbol,
-      rawLastTradeStartAmount
-    ); // base currency
-    const lastTradePrice = depositExchangeOrderBook.bestBid.quote;
-    const lastTradeEndAmount =
-      depositExchangeOrderBook.bestBid.quote * lastTradeStartAmount; // quote currency
+      depositMarketDetails,
+      withdrawMarketDetails,
+      networks: { depositNetwork, withdrawNetwork },
+      withdrawExchangeTradeFee,
+    });
+
+    const lastTradeStep = this.calculateLastTradeStep({
+      arbitrageCalculationType,
+      depositMarketDetails,
+      withdrawAmount: withdrawStep.coin.amount,
+      withdrawFee,
+    });
+    const lastTradeEndAmount = lastTradeStep.endCoin.amount;
+
     const finalAmount = this.feeCalculator.deductFee(
       lastTradeEndAmount,
       depositExchangeTradeFee
@@ -95,74 +126,26 @@ export class ArbitrageStepsCalculator {
 
     const steps: ArbitrageSteps = [
       {
-        event: ExchangeEvent.TRADE,
-        exchangeId: withdrawExchange.id,
-        operation: TradeOperation.BUY,
-        startCoin: {
-          amount: firstTradeStartAmount,
-          currencyCode: quoteCurrencyCode,
-        },
-        endCoin: {
-          amount: firstTradeEndAmount,
-          currencyCode: baseCurrencyCode,
-        },
-        price: firstTradePrice,
-        amount: firstTradeEndAmount,
+        ...firstTradeStep,
         fee: withdrawExchangeTradeFee,
-        orderBook: withdrawExchangeOrderBook,
-        dayChangePercentage: withdrawExchangeTicker.percentage,
-        isActive: withdrawExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
       {
-        event: ExchangeEvent.WITHDRAW,
-        network: {
-          name: networkName,
-          withdrawNetwork: {
-            isActive: withdrawNetwork.active,
-            isDepositable: withdrawNetwork.deposit,
-            isWithdrawable: withdrawNetwork.withdraw,
-          },
-          depositNetwork: {
-            isActive: depositNetwork.active,
-            isDepositable: depositNetwork.deposit,
-            isWithdrawable: depositNetwork.withdraw,
-          },
-        },
-        exchanges: {
-          withdrawExchangeId: withdrawExchange.id,
-          depositExchangeId: depositExchange.id,
-        },
-        coin: {
-          amount: withdrawAmount,
-          currencyCode: withdrawCurrencyCode,
-        },
+        ...withdrawStep,
         fee: withdrawFee,
       },
       { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
       {
-        event: ExchangeEvent.TRADE,
-        operation: TradeOperation.SELL,
-        exchangeId: depositExchange.id,
-        startCoin: {
-          amount: lastTradeStartAmount,
-          currencyCode: baseCurrencyCode,
-        },
-        endCoin: {
-          amount: lastTradeEndAmount,
-          currencyCode: quoteCurrencyCode,
-        },
-        price: lastTradePrice,
-        amount: lastTradeStartAmount,
+        ...lastTradeStep,
         fee: depositExchangeTradeFee,
-        orderBook: depositExchangeOrderBook,
-        dayChangePercentage: depositExchangeTicker.percentage,
-        isActive: depositExchangeMarketData.active,
       },
       { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
       {
         event: ExchangeEvent.STATUS,
-        coin: { amount: finalAmount, currencyCode: quoteCurrencyCode },
+        coin: {
+          ...lastTradeStep.endCoin,
+          amount: finalAmount,
+        },
         profit: profitOrLoss,
       },
     ];
@@ -174,144 +157,157 @@ export class ArbitrageStepsCalculator {
     return null;
   }
 
-  async calculateReverseArbitrageSteps({
-    withdrawNetwork,
-    depositNetwork,
-  }: CalculateParams): Promise<ArbitrageSteps | null> {
-    const {
-      withdrawExchange,
-      depositExchange,
-      withdrawExchangeOrderBook,
-      depositExchangeOrderBook,
-      withdrawExchangeTicker,
-      depositExchangeTicker,
-      withdrawExchangeMarketData,
-      depositExchangeMarketData,
-    } = this.params;
-    const {
-      symbol,
-      base: baseCurrencyCode,
-      quote: quoteCurrencyCode,
-    } = withdrawExchangeMarketData;
-    const networkName = withdrawNetwork.network;
-    const firstTradeStartAmount = Math.min(
-      withdrawExchangeOrderBook.bestBid.base,
-      depositExchangeOrderBook.bestAsk.base
-    ); // base currency
-    const firstTradePrice = withdrawExchangeOrderBook.bestBid.quote;
-    const firstTradeEndAmount = firstTradeStartAmount * firstTradePrice; // quote currency
+  private calculateFirstTradeStep({
+    withdrawMarketDetails,
+    depositMarketDetails,
+    arbitrageCalculationType: arbitrageType,
+  }: CalculateFirstTradeStepParams): Omit<TradeStep, "fee"> {
+    const operation =
+      arbitrageType === ArbitrageCalculationType.FORWARD
+        ? TradeOperation.BUY
+        : TradeOperation.SELL;
+    let firstTradeEndAmount: number;
+    let firstTradePrice: number;
+    let firstTradeStartAmount: number;
 
-    const { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee } =
-      await this.feeCalculator.calculateFees({
-        withdrawExchange,
-        depositExchange,
-        networkName,
-        symbol,
-        currencyCode: quoteCurrencyCode,
-      });
-    const withdrawAmount = this.feeCalculator.deductFee(
+    if (arbitrageType === ArbitrageCalculationType.FORWARD) {
+      firstTradeEndAmount = Math.min(
+        withdrawMarketDetails.orderBook.bestAsk.base,
+        depositMarketDetails.orderBook.bestBid.base
+      ); // base currency
+      firstTradePrice = withdrawMarketDetails.orderBook.bestAsk.quote;
+      firstTradeStartAmount = firstTradeEndAmount * firstTradePrice; // quote currency
+    } else {
+      firstTradeStartAmount = Math.min(
+        withdrawMarketDetails.orderBook.bestBid.base,
+        depositMarketDetails.orderBook.bestAsk.base
+      ); // base currency
+      firstTradePrice = withdrawMarketDetails.orderBook.bestBid.quote;
+      firstTradeEndAmount = firstTradeStartAmount * firstTradePrice; // quote currency
+    }
+
+    return {
+      event: ExchangeEvent.TRADE,
+      exchangeId: withdrawMarketDetails.exchange.id,
+      operation,
+      startCoin: {
+        amount: firstTradeStartAmount,
+        currencyCode: withdrawMarketDetails.quoteCurrency.code,
+        currencyName: withdrawMarketDetails.quoteCurrency.name,
+      },
+      endCoin: {
+        amount: firstTradeEndAmount,
+        currencyCode: withdrawMarketDetails.baseCurrency.code,
+        currencyName: withdrawMarketDetails.baseCurrency.name,
+      },
+      price: firstTradePrice,
+      amount: firstTradeEndAmount,
+      orderBook: withdrawMarketDetails.orderBook,
+      dayChangePercentage: withdrawMarketDetails.ticker.percentage,
+      isActive: withdrawMarketDetails.marketData.active,
+    };
+  }
+
+  private calculateWithdrawStep({
+    arbitrageCalculationType: arbitrageType,
+    depositMarketDetails,
+    withdrawMarketDetails,
+    firstTradeEndAmount,
+    withdrawExchangeTradeFee,
+    networks: { depositNetwork, withdrawNetwork },
+  }: CalculateWithdrawStepParams): Omit<WithdrawStep, "fee"> {
+    const withdrawCurrency =
+      arbitrageType === ArbitrageCalculationType.FORWARD
+        ? withdrawMarketDetails.baseCurrency
+        : withdrawMarketDetails.quoteCurrency;
+    const rawWithdrawAmount = this.feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
     );
+    const withdrawAmount = rawWithdrawAmount;
 
-    const lastTradeStartAmount = this.feeCalculator.deductFee(
+    return {
+      event: ExchangeEvent.WITHDRAW,
+      network: {
+        name: withdrawNetwork.network,
+        withdrawNetwork: {
+          isActive: withdrawNetwork.active,
+          isDepositable: withdrawNetwork.deposit,
+          isWithdrawable: withdrawNetwork.withdraw,
+        },
+        depositNetwork: {
+          isActive: depositNetwork.active,
+          isDepositable: depositNetwork.deposit,
+          isWithdrawable: depositNetwork.withdraw,
+        },
+      },
+      exchanges: {
+        withdrawExchangeId: withdrawMarketDetails.exchange.id,
+        depositExchangeId: depositMarketDetails.exchange.id,
+      },
+      coin: {
+        amount: withdrawAmount,
+        currencyCode: withdrawCurrency.code,
+        currencyName: withdrawCurrency.name,
+      },
+    };
+  }
+
+  private calculateLastTradeStep({
+    arbitrageCalculationType: arbitrageType,
+    depositMarketDetails,
+    withdrawAmount,
+    withdrawFee,
+  }: CalculateLastTradeStepParams): Omit<TradeStep, "fee"> {
+    const symbol = depositMarketDetails.marketData.symbol;
+    const rawLastTradeStartAmount = this.feeCalculator.deductFee(
       withdrawAmount,
       withdrawFee
-    ); // quote currency
-    const lastTradePrice = depositExchangeOrderBook.bestAsk.quote;
-    const rawLastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
-    const lastTradeEndAmount = depositExchange.amountToPrecision(
-      symbol,
-      rawLastTradeEndAmount
-    ); // base currency
-    const finalAmount = this.feeCalculator.deductFee(
-      lastTradeEndAmount,
-      depositExchangeTradeFee
-    );
-    const profitOrLoss = this.getProfitOrLoss(
-      firstTradeStartAmount,
-      finalAmount
     );
 
-    const steps: ArbitrageSteps = [
-      {
-        event: ExchangeEvent.TRADE,
-        exchangeId: withdrawExchange.id,
-        operation: TradeOperation.SELL,
-        startCoin: {
-          amount: firstTradeStartAmount,
-          currencyCode: baseCurrencyCode,
-        },
-        endCoin: {
-          amount: firstTradeEndAmount,
-          currencyCode: quoteCurrencyCode,
-        },
-        price: firstTradePrice,
-        amount: firstTradeStartAmount,
-        orderBook: withdrawExchangeOrderBook,
-        fee: withdrawExchangeTradeFee,
-        dayChangePercentage: withdrawExchangeTicker.percentage,
-        isActive: withdrawExchangeMarketData.active,
-      },
-      { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
-      {
-        event: ExchangeEvent.WITHDRAW,
-        network: {
-          name: networkName,
-          withdrawNetwork: {
-            isActive: withdrawNetwork.active,
-            isDepositable: withdrawNetwork.deposit,
-            isWithdrawable: withdrawNetwork.withdraw,
-          },
-          depositNetwork: {
-            isActive: depositNetwork.active,
-            isDepositable: depositNetwork.deposit,
-            isWithdrawable: depositNetwork.withdraw,
-          },
-        },
-        exchanges: {
-          withdrawExchangeId: withdrawExchange.id,
-          depositExchangeId: depositExchange.id,
-        },
-        coin: {
-          amount: withdrawAmount,
-          currencyCode: quoteCurrencyCode,
-        },
-        fee: withdrawFee,
-      },
-      { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
-      {
-        event: ExchangeEvent.TRADE,
-        operation: TradeOperation.BUY,
-        exchangeId: depositExchange.id,
-        startCoin: {
-          amount: lastTradeStartAmount,
-          currencyCode: quoteCurrencyCode,
-        },
-        endCoin: {
-          amount: lastTradeEndAmount,
-          currencyCode: baseCurrencyCode,
-        },
-        price: lastTradePrice,
-        amount: lastTradeEndAmount,
-        orderBook: depositExchangeOrderBook,
-        fee: depositExchangeTradeFee,
-        dayChangePercentage: depositExchangeTicker.percentage,
-        isActive: depositExchangeMarketData.active,
-      },
-      { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
-      {
-        event: ExchangeEvent.STATUS,
-        coin: { amount: finalAmount, currencyCode: baseCurrencyCode },
-        profit: profitOrLoss,
-      },
-    ];
-
-    if (this.isArbitrageFeasible(firstTradeStartAmount, finalAmount)) {
-      return steps;
+    let operation: TradeOperation;
+    let lastTradeStartAmount: number;
+    let lastTradePrice: number;
+    let lastTradeEndAmount: number;
+    if (arbitrageType === ArbitrageCalculationType.FORWARD) {
+      operation = TradeOperation.SELL;
+      lastTradeStartAmount = depositMarketDetails.exchange.amountToPrecision(
+        symbol,
+        rawLastTradeStartAmount
+      ); // base currency
+      lastTradePrice = depositMarketDetails.orderBook.bestBid.quote;
+      lastTradeEndAmount = lastTradePrice * lastTradeStartAmount; // quote currency
+    } else {
+      operation = TradeOperation.BUY;
+      lastTradeStartAmount = rawLastTradeStartAmount; // quote currency
+      lastTradePrice = depositMarketDetails.orderBook.bestAsk.quote;
+      const rawLastTradeEndAmount = lastTradeStartAmount / lastTradePrice;
+      lastTradeEndAmount = depositMarketDetails.exchange.amountToPrecision(
+        symbol,
+        rawLastTradeEndAmount
+      ); // base currency
     }
 
-    return null;
+    return {
+      event: ExchangeEvent.TRADE,
+      operation,
+      exchangeId: depositMarketDetails.exchange.id,
+      startCoin: {
+        amount: lastTradeStartAmount,
+        currencyCode: depositMarketDetails.baseCurrency.code,
+        currencyName: depositMarketDetails.baseCurrency.name,
+      },
+      endCoin: {
+        amount: lastTradeEndAmount,
+        currencyCode: depositMarketDetails.quoteCurrency.code,
+        currencyName: depositMarketDetails.quoteCurrency.name,
+      },
+      price: lastTradePrice,
+      amount: lastTradeStartAmount,
+      orderBook: depositMarketDetails.orderBook,
+      dayChangePercentage: depositMarketDetails.ticker.percentage,
+      isActive: depositMarketDetails.marketData.active,
+    };
   }
 
   private isArbitrageFeasible(startAmount: number, endAmount: number) {
