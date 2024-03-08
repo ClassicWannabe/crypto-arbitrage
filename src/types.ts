@@ -50,7 +50,7 @@ export enum ExchangeEvent {
 
 export type CurrencyAmount = {
   currencyCode: string;
-  currencyName: string;
+  currencyName?: string;
   amount: number;
 };
 

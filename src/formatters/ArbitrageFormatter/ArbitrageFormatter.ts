@@ -210,7 +210,7 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatCoin(coin: CurrencyAmount) {
     return this.makeBold(
-      `${this.formatNumber(coin.amount)} ${coin.currencyCode} (${coin.currencyName})`
+      `${this.formatNumber(coin.amount)} ${coin.currencyCode} ${coin.currencyName ? `(${coin.currencyName})` : ""}`
     );
   }
 

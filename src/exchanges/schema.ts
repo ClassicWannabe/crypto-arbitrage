@@ -25,7 +25,7 @@ export const networksSchema = z.record(z.string(), networkSchema);
 
 export const commonCurrencySchema = z.object({
   code: z.string(),
-  name: z.string(),
+  name: z.string().optional(),
   active: z.boolean(),
   deposit: z.boolean().nullish(),
   withdraw: z.boolean().nullish(),
