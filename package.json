@@ -25,7 +25,7 @@
     "@aws-sdk/client-sns": "^3.511.0",
     "@aws-sdk/client-ssm": "^3.511.0",
     "@aws-sdk/lib-dynamodb": "^3.506.0",
-    "ccxt": "^4.2.10",
+    "ccxt": "^4.2.65",
     "deepmerge-ts": "^5.1.0",
     "dotenv": "^16.3.1",
     "electrodb": "^2.13.1",
