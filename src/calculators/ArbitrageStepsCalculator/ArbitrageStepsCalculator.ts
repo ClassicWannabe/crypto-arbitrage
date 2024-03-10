@@ -21,8 +21,8 @@ type MarketDetails = {
   marketData: Market;
   ticker: Ticker;
   exchange: Exchange;
-  baseCurrency: Currency;
-  quoteCurrency: Currency;
+  baseCurrency: Currency | null;
+  quoteCurrency: Currency | null;
 };
 export type CalculateArbitrageStepsParams = {
   withdrawMarketDetails: MarketDetails;
@@ -75,7 +75,7 @@ export class ArbitrageStepsCalculator {
   async calculateArbitrageSteps({
     withdrawNetwork,
     depositNetwork,
-    arbitrageCalculationType
+    arbitrageCalculationType,
   }: CalculateParams): Promise<ArbitrageSteps | null> {
     const { withdrawMarketDetails, depositMarketDetails } = this.params;
     const { symbol } = withdrawMarketDetails.marketData;
@@ -192,13 +192,17 @@ export class ArbitrageStepsCalculator {
       operation,
       startCoin: {
         amount: firstTradeStartAmount,
-        currencyCode: withdrawMarketDetails.quoteCurrency.code,
-        currencyName: withdrawMarketDetails.quoteCurrency.name,
+        currencyCode:
+          withdrawMarketDetails.quoteCurrency?.code ??
+          withdrawMarketDetails.marketData.quote,
+        currencyName: withdrawMarketDetails.quoteCurrency?.name,
       },
       endCoin: {
         amount: firstTradeEndAmount,
-        currencyCode: withdrawMarketDetails.baseCurrency.code,
-        currencyName: withdrawMarketDetails.baseCurrency.name,
+        currencyCode:
+          withdrawMarketDetails.baseCurrency?.code ??
+          withdrawMarketDetails.marketData.base,
+        currencyName: withdrawMarketDetails.baseCurrency?.name,
       },
       price: firstTradePrice,
       amount: firstTradeEndAmount,
@@ -216,10 +220,16 @@ export class ArbitrageStepsCalculator {
     withdrawExchangeTradeFee,
     networks: { depositNetwork, withdrawNetwork },
   }: CalculateWithdrawStepParams): Omit<WithdrawStep, "fee"> {
-    const withdrawCurrency =
+    const withdrawCurrency: Pick<Currency, "code" | "name"> =
       arbitrageType === ArbitrageCalculationType.FORWARD
-        ? withdrawMarketDetails.baseCurrency
-        : withdrawMarketDetails.quoteCurrency;
+        ? {
+            code: withdrawMarketDetails.marketData.base,
+            ...withdrawMarketDetails.baseCurrency,
+          }
+        : {
+            code: withdrawMarketDetails.marketData.quote,
+            ...withdrawMarketDetails.quoteCurrency,
+          };
     const rawWithdrawAmount = this.feeCalculator.deductFee(
       firstTradeEndAmount,
       withdrawExchangeTradeFee
@@ -248,7 +258,7 @@ export class ArbitrageStepsCalculator {
       coin: {
         amount: withdrawAmount,
         currencyCode: withdrawCurrency.code,
-        currencyName: withdrawCurrency.name,
+        currencyName: withdrawCurrency?.name,
       },
     };
   }
@@ -294,13 +304,17 @@ export class ArbitrageStepsCalculator {
       exchangeId: depositMarketDetails.exchange.id,
       startCoin: {
         amount: lastTradeStartAmount,
-        currencyCode: depositMarketDetails.baseCurrency.code,
-        currencyName: depositMarketDetails.baseCurrency.name,
+        currencyCode:
+          depositMarketDetails.baseCurrency?.code ??
+          depositMarketDetails.marketData.base,
+        currencyName: depositMarketDetails.baseCurrency?.name,
       },
       endCoin: {
         amount: lastTradeEndAmount,
-        currencyCode: depositMarketDetails.quoteCurrency.code,
-        currencyName: depositMarketDetails.quoteCurrency.name,
+        currencyCode:
+          depositMarketDetails.quoteCurrency?.code ??
+          depositMarketDetails.marketData.quote,
+        currencyName: depositMarketDetails.quoteCurrency?.name,
       },
       price: lastTradePrice,
       amount: lastTradeStartAmount,
