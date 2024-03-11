@@ -19,6 +19,7 @@ import {
   orderSchema,
   transactionSchema,
   addressSchema,
+  depositWithdrawFeeSchema,
 } from "./schema.js";
 import { Fee } from "../types.js";
 
@@ -84,6 +85,7 @@ export type Balance = z.infer<typeof balanceSchema>;
 export type Order = z.infer<typeof orderSchema>;
 export type Transcation = z.infer<typeof transactionSchema>;
 export type Address = z.infer<typeof addressSchema>;
+export type DepositWithdrawFee = z.infer<typeof depositWithdrawFeeSchema>;
 
 export enum ExchangeType {
   BINANCE = "binance",

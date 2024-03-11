@@ -99,3 +99,17 @@ export const addressSchema = z.object({
   network: z.array(z.string().min(1)),
   address: z.string().min(1),
 });
+
+const feeSchema = z.object({
+  fee: z.number().nullish(),
+  percentage: z.boolean().nullish(),
+});
+
+export const depositWithdrawFeeSchema = z.object({
+  deposit: feeSchema,
+  withdraw: feeSchema,
+  networks: z.record(
+    z.string(),
+    z.object({ deposit: feeSchema, withdraw: feeSchema })
+  ),
+});

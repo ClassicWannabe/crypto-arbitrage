@@ -13,6 +13,7 @@ import {
   balanceSchema,
   currenciesSchema,
   currencySchema,
+  depositWithdrawFeeSchema,
   marketSchema,
   marketsSchema,
   orderBookSchema,
@@ -197,20 +198,41 @@ export abstract class AbstractExchange implements Exchange {
 
   @retryOnError()
   async getWithdrawFee(code: string, networkName?: string) {
-    const currency = await this.getCurrency(code);
-    const currencyFee = currency?.fee ?? null;
-
-    if (isNil(networkName)) {
-      return currencyFee ? { value: currencyFee, type: FeeType.FIXED } : null;
-    }
-    const network = currency?.networks[networkName];
-    const fee = network?.fee ?? currencyFee;
-
-    if (!fee) {
+    const rawDepositWithdrawFee =
+      await this.exchange.fetchDepositWithdrawFee(code);
+    if (!rawDepositWithdrawFee) {
       return null;
     }
 
-    return { value: fee, type: FeeType.FIXED };
+    const depositWithdrawFee = parseValue({
+      schema: depositWithdrawFeeSchema,
+      value: rawDepositWithdrawFee,
+    });
+    const defaultWithdrawFee = depositWithdrawFee.withdraw.fee
+      ? {
+          value: depositWithdrawFee.withdraw.fee,
+          type: depositWithdrawFee.withdraw.percentage
+            ? FeeType.PERCENT
+            : FeeType.FIXED,
+        }
+      : null;
+
+    if (isNil(networkName)) {
+      return defaultWithdrawFee;
+    }
+
+    const networkWithdrawFee = depositWithdrawFee.networks[networkName];
+
+    if (!networkWithdrawFee?.withdraw.fee) {
+      return defaultWithdrawFee;
+    }
+
+    return {
+      value: networkWithdrawFee.withdraw.fee,
+      type: networkWithdrawFee.withdraw.percentage
+        ? FeeType.PERCENT
+        : FeeType.FIXED,
+    };
   }
 
   @retryOnError()
