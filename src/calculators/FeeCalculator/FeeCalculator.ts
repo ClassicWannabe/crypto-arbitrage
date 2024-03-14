@@ -9,8 +9,40 @@ type CalculateFeesArgs = {
   currencyCode: string;
 };
 
+export type Fees = {
+  withdrawExchangeTradeFee: Fee;
+  depositExchangeTradeFee: Fee;
+  withdrawFee: Fee;
+};
+
 export class FeeCalculator {
-  async calculateFees({
+  private savedFees: { fees: Fees; lastUpdate: Date } | null = null;
+
+  async calculateFees(args: CalculateFeesArgs): Promise<Fees> {
+    const savedFees = this.getSavedFees();
+    if (savedFees) {
+      return savedFees;
+    }
+
+    const newFees = await this.fetchNewFees(args);
+    this.updateSavedFees(newFees);
+
+    return newFees;
+  }
+
+  private getSavedFees() {
+    if (!this.savedFees) {
+      return null;
+    }
+    const thirtyMinInMs = 50 * 60 * 1000;
+    const now = Date.now();
+    if (now - this.savedFees.lastUpdate.getTime() > thirtyMinInMs) {
+      return null;
+    }
+    return this.savedFees.fees;
+  }
+
+  private async fetchNewFees({
     withdrawExchange,
     depositExchange,
     symbol,
@@ -28,6 +60,13 @@ export class FeeCalculator {
     depositExchangeTradeFee ??= emptyFee;
     withdrawFee ??= emptyFee;
     return { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee };
+  }
+
+  private updateSavedFees(fees: Fees) {
+    this.savedFees = {
+      fees,
+      lastUpdate: new Date(),
+    };
   }
 
   deductFee(amount: number, fee: Fee): number {
