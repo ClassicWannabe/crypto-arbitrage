@@ -208,6 +208,8 @@ export abstract class AbstractExchange implements Exchange {
       schema: depositWithdrawFeeSchema,
       value: rawDepositWithdrawFee,
     });
+    const currency = await this.getCurrency(code);
+    const currencyWithdrawFee = currency?.fee ?? null;
     const defaultWithdrawFee = depositWithdrawFee.withdraw.fee
       ? {
           value: depositWithdrawFee.withdraw.fee,
@@ -215,7 +217,9 @@ export abstract class AbstractExchange implements Exchange {
             ? FeeType.PERCENT
             : FeeType.FIXED,
         }
-      : null;
+      : currencyWithdrawFee
+        ? { value: currencyWithdrawFee, type: FeeType.FIXED }
+        : null;
 
     if (isNil(networkName)) {
       return defaultWithdrawFee;
