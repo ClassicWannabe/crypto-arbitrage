@@ -1,7 +1,6 @@
 import { ArbitrageData } from "../../types.js";
 import { Exchange, Network } from "../../exchanges/types.js";
 import { logger } from "../../logger/logger.js";
-import { FeeCalculator } from "../FeeCalculator/FeeCalculator.js";
 import {
   ArbitrageCalculationType,
   ArbitrageStepsCalculator,
@@ -13,17 +12,14 @@ type NetworkPair = { withdrawNetwork: Network; depositNetwork: Network };
 
 export class MultiExchangeCalculator {
   private readonly exchanges: Exchange[];
-  private minProfitPercent = 0;
 
   constructor(
     exchanges: Exchange[],
-    minProfitPercent = 0,
-    private readonly targetCoins: string[] | null
+    private readonly targetCoins: string[] | null,
+    private readonly arbitrageStepsCalculator: ArbitrageStepsCalculator
   ) {
     this.checkExchanges(exchanges);
-    this.checkMinProfitPercent(minProfitPercent);
     this.exchanges = exchanges;
-    this.minProfitPercent = minProfitPercent;
   }
 
   async calculate(symbol: string): Promise<ArbitrageData[]> {
@@ -38,23 +34,10 @@ export class MultiExchangeCalculator {
     );
   }
 
-  setMinProfitPercent(minProfitPercent: number) {
-    this.checkMinProfitPercent(minProfitPercent);
-    this.minProfitPercent = minProfitPercent;
-  }
-
   private checkExchanges(exchanges: Exchange[]) {
     if (exchanges.length < 2) {
       throw new Error(
         `${MultiExchangeCalculator.name}: You need to provide at least two exchanges`
-      );
-    }
-  }
-
-  private checkMinProfitPercent(minProfitPercent: number) {
-    if (minProfitPercent < 0) {
-      throw new Error(
-        `${MultiExchangeCalculator.name}: You need to provide non-negative prtofit percent`
       );
     }
   }
@@ -108,35 +91,35 @@ export class MultiExchangeCalculator {
         depositExchangeQuoteCurrency,
       } = initialData;
 
-      const feeCalculator = new FeeCalculator();
-      const arbitrageStepsCalculator = new ArbitrageStepsCalculator(
-        feeCalculator,
-        {
-          withdrawMarketDetails: {
-            exchange: withdrawExchange,
-            marketData: withdrawExchangeMarketData,
-            orderBook: withdrawExchangeOrderBook,
-            ticker: withdrawExchangeTicker,
-            baseCurrency: withdrawExchangeBaseCurrency,
-            quoteCurrency: withdrawExchangeQuoteCurrency,
-          },
-          depositMarketDetails: {
-            exchange: depositExchange,
-            marketData: depositExchangeMarketData,
-            orderBook: depositExchangeOrderBook,
-            ticker: depositExchangeTicker,
-            baseCurrency: depositExchangeBaseCurrency,
-            quoteCurrency: depositExchangeQuoteCurrency,
-          },
-          minProfitPercent: this.minProfitPercent,
-        }
-      );
       const baseCurrencyCode = withdrawExchangeMarketData.base;
       const quoteCurrencyCode = withdrawExchangeMarketData.quote;
+      const withdrawMarketDetails = {
+        exchange: withdrawExchange,
+        marketData: withdrawExchangeMarketData,
+        orderBook: withdrawExchangeOrderBook,
+        ticker: withdrawExchangeTicker,
+        baseCurrency: withdrawExchangeBaseCurrency,
+        quoteCurrency: withdrawExchangeQuoteCurrency,
+      };
+      const depositMarketDetails = {
+        exchange: depositExchange,
+        marketData: depositExchangeMarketData,
+        orderBook: depositExchangeOrderBook,
+        ticker: depositExchangeTicker,
+        baseCurrency: depositExchangeBaseCurrency,
+        quoteCurrency: depositExchangeQuoteCurrency,
+      };
 
       for (const networkPair of baseCurrencyCommonNetworks) {
-        const steps = await arbitrageStepsCalculator.calculateArbitrageSteps({
-          ...networkPair,
+        const steps = await this.arbitrageStepsCalculator.calculateArbitrageSteps({
+          withdrawMarketDetails: {
+            ...withdrawMarketDetails,
+            network: networkPair.withdrawNetwork,
+          },
+          depositMarketDetails: {
+            ...depositMarketDetails,
+            network: networkPair.depositNetwork,
+          },
           arbitrageCalculationType: ArbitrageCalculationType.FORWARD,
         });
 
@@ -151,8 +134,15 @@ export class MultiExchangeCalculator {
       }
 
       for (const networkPair of quoteCurrencyCommonNetworks) {
-        const steps = await arbitrageStepsCalculator.calculateArbitrageSteps({
-          ...networkPair,
+        const steps = await this.arbitrageStepsCalculator.calculateArbitrageSteps({
+          withdrawMarketDetails: {
+            ...withdrawMarketDetails,
+            network: networkPair.withdrawNetwork,
+          },
+          depositMarketDetails: {
+            ...depositMarketDetails,
+            network: networkPair.depositNetwork,
+          },
           arbitrageCalculationType: ArbitrageCalculationType.REVERSE,
         });
 

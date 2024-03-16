@@ -18,6 +18,7 @@ import {
 import { Formatter } from "../types.js";
 import { customDeepmerge } from "../../storages/helpers.js";
 import { tableHbsPath } from "./consts.js";
+import { Quotation } from "../../exchanges/types.js";
 
 export class ArbitrageFormatter implements Formatter {
   async format({ symbol, steps }: ArbitrageData) {
@@ -259,14 +260,36 @@ export class ArbitrageFormatter implements Formatter {
   private normalizeImageSteps(steps: TradeStep[]): TradeStep[] {
     const normalizedSteps = [];
     for (const step of steps) {
+      const normalizedOrderBook = this.normalizeImageStepOrderBook(
+        step.orderBook,
+        step.usedQuotations
+      );
       const normalizedStep = customDeepmerge(step, {
-        orderBook: {
-          asks: reverse(step.orderBook.asks.slice(0, 5)),
-          bids: step.orderBook.bids.slice(0, 5),
-        },
+        orderBook: normalizedOrderBook,
       });
       normalizedSteps.push(normalizedStep);
     }
     return normalizedSteps;
+  }
+
+  private normalizeImageStepOrderBook(
+    orderBook: TradeStep["orderBook"],
+    usedQuotations: TradeStep["usedQuotations"]
+  ) {
+    const sliceLength = usedQuotations.length + 5;
+    const asks = orderBook.asks.slice(0, sliceLength).map((quotation, idx) => {
+      return {
+        ...quotation,
+        isUsed: idx < usedQuotations.length && usedQuotations.type === "asks",
+      };
+    });
+
+    const bids = orderBook.bids.slice(0, sliceLength).map((quotation, idx) => {
+      return {
+        ...quotation,
+        isUsed: idx < usedQuotations.length && usedQuotations.type === "bids",
+      };
+    });
+    return { ...orderBook, asks: reverse(asks), bids };
   }
 }

@@ -1,12 +1,27 @@
 import { Exchange } from "../../exchanges/types.js";
-import { Fee, FeeType } from "../../types.js";
+import { Fee, FeeType, Nullable } from "../../types.js";
 
-type CalculateFeesArgs = {
-  withdrawExchange: Exchange;
-  depositExchange: Exchange;
-  symbol: string;
-  networkName: string;
-  currencyCode: string;
+export enum CalculatedFeeType {
+  WITHDRAW = "withdraw",
+  TRADE = "trade",
+}
+
+type CalculateFeesArgs =
+  | {
+      type: CalculatedFeeType.TRADE;
+      exchange: Exchange;
+      symbol: string;
+    }
+  | {
+      type: CalculatedFeeType.WITHDRAW;
+      exchange: Exchange;
+      networkName: string;
+      currencyCode: string;
+    };
+
+type GetSavedFeesArgs = {
+  exchangeId: string;
+  symbolOrCurrencyCode: string;
 };
 
 export type Fees = {
@@ -15,57 +30,93 @@ export type Fees = {
   withdrawFee: Fee;
 };
 
+type SavedFee = {
+  lastUpdate: Date;
+  fee: Fee;
+};
+
+type SavedFees = {
+  [exchangeId: string]: {
+    [symbolOrCurrencyCode: string]: SavedFee;
+  };
+};
+
 export class FeeCalculator {
-  private savedFees: { fees: Fees; lastUpdate: Date } | null = null;
+  private savedFees: SavedFees = {};
 
-  async calculateFees(args: CalculateFeesArgs): Promise<Fees> {
-    const savedFees = this.getSavedFees();
-    if (savedFees) {
-      return savedFees;
+  async calculateFee(args: CalculateFeesArgs): Promise<Fee> {
+    let symbolOrCurrencyCode;
+    if (args.type === CalculatedFeeType.TRADE) {
+      symbolOrCurrencyCode = args.symbol;
+    } else {
+      symbolOrCurrencyCode = args.currencyCode;
     }
 
-    const newFees = await this.fetchNewFees(args);
-    this.updateSavedFees(newFees);
+    const savedFee = this.getSavedFee({
+      exchangeId: args.exchange.id,
+      symbolOrCurrencyCode,
+    });
 
-    return newFees;
+    if (savedFee) {
+      return savedFee;
+    }
+
+    const newFee = await this.fetchNewFee(args);
+    this.updateSavedFee(newFee, args.exchange.id, symbolOrCurrencyCode);
+
+    return newFee;
   }
 
-  private getSavedFees() {
-    if (!this.savedFees) {
+  private getSavedFee({
+    exchangeId,
+    symbolOrCurrencyCode,
+  }: GetSavedFeesArgs): Fee | null {
+    return this.processSavedFee(exchangeId, symbolOrCurrencyCode);
+  }
+
+  private processSavedFee(exchangeId: string, symbolOrCurrencyCode: string) {
+    const savedFee = this.savedFees[exchangeId]?.[symbolOrCurrencyCode] ?? null;
+    if (!savedFee) {
       return null;
     }
-    const thirtyMinInMs = 50 * 60 * 1000;
+    const freshSavedFee = this.getFreshFee(savedFee);
+
+    return freshSavedFee;
+  }
+
+  private getFreshFee(savedFee: SavedFee) {
+    const thirtyMinInMs = 30 * 60 * 1000;
     const now = Date.now();
-    if (now - this.savedFees.lastUpdate.getTime() > thirtyMinInMs) {
+
+    if (now - savedFee.lastUpdate.getTime() > thirtyMinInMs) {
       return null;
     }
-    return this.savedFees.fees;
+    return savedFee.fee;
   }
 
-  private async fetchNewFees({
-    withdrawExchange,
-    depositExchange,
-    symbol,
-    networkName,
-    currencyCode,
-  }: CalculateFeesArgs) {
+  private async fetchNewFee(args: CalculateFeesArgs) {
     const emptyFee = { type: FeeType.FIXED, value: 0 };
-    let [withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee] =
-      await Promise.all([
-        withdrawExchange.getTradingFee(symbol),
-        depositExchange.getTradingFee(symbol),
-        withdrawExchange.getWithdrawFee(currencyCode, networkName),
-      ]);
-    withdrawExchangeTradeFee ??= emptyFee;
-    depositExchangeTradeFee ??= emptyFee;
-    withdrawFee ??= emptyFee;
-    return { withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee };
+    let fee;
+    if (args.type === CalculatedFeeType.TRADE) {
+      fee = await args.exchange.getTradingFee(args.symbol);
+    } else {
+      fee = await args.exchange.getWithdrawFee(
+        args.currencyCode,
+        args.networkName
+      );
+    }
+
+    return fee ?? emptyFee;
   }
 
-  private updateSavedFees(fees: Fees) {
-    this.savedFees = {
-      fees,
-      lastUpdate: new Date(),
+  private updateSavedFee(
+    fee: Fee,
+    exchangeId: string,
+    symbolOrCurrencyCode: string
+  ) {
+    this.savedFees[exchangeId] = {
+      ...this.savedFees[exchangeId],
+      [symbolOrCurrencyCode]: { lastUpdate: new Date(), fee },
     };
   }
 
@@ -74,5 +125,12 @@ export class FeeCalculator {
       return amount - amount * fee.value;
     }
     return amount - fee.value;
+  }
+
+  addFee(amount: number, fee: Fee): number {
+    if (fee.type === FeeType.PERCENT) {
+      return amount + amount * fee.value;
+    }
+    return amount + fee.value;
   }
 }

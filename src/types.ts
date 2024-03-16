@@ -69,6 +69,10 @@ export type TradeStep = {
   startCoin: CurrencyAmount;
   endCoin: CurrencyAmount;
   orderBook: OrderBook;
+  usedQuotations: {
+    type: "bids" | "asks";
+    length: number;
+  };
   price: number;
   amount: number;
   exchangeId: string;
@@ -116,3 +120,5 @@ export enum NodeEnv {
   PROD = "prod",
   DEV = "dev",
 }
+
+export type Nullable<T> = { [key in keyof T]: T[key] | null };

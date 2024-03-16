@@ -11,6 +11,8 @@ import { MultiExchangeArbitrageFinder } from "../services/MultiExchangeArbitrage
 import { ArbitrageFormatter } from "../formatters/ArbitrageFormatter/ArbitrageFormatter.js";
 import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js";
 import { ArbitrageRepo } from "../storages/ArbitrageRepo/ArbitrageRepo.js";
+import { ArbitrageStepsCalculator } from "../calculators/ArbitrageStepsCalculator/ArbitrageStepsCalculator.js";
+import { FeeCalculator } from "../calculators/FeeCalculator/FeeCalculator.js";
 
 const storage = new FileStorage();
 const arbitrageConfig = await storage.getArbitrageConfig();
@@ -26,10 +28,15 @@ const bot = new TelegramBot(telegramBotToken);
 const publisher = new TelegramPublisher(bot, telegramGroupId);
 
 const formatter = new ArbitrageFormatter();
+const feeCalculator = new FeeCalculator();
+const arbitrageStepsCalculator = new ArbitrageStepsCalculator(
+  feeCalculator,
+  arbitrageConfig.minProfitPercent
+);
 const mutliExchangeCalculator = new MultiExchangeCalculator(
   exchanges,
-  arbitrageConfig.minProfitPercent,
-  arbitrageConfig.targetCoins
+  arbitrageConfig.targetCoins,
+  arbitrageStepsCalculator
 );
 const arbitrageRepo = new ArbitrageRepo();
 const multiExchangeArbitrageService = new MultiExchangeArbitrageFinder(

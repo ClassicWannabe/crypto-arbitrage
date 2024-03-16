@@ -26,15 +26,8 @@ export class MultiExchangeArbitrageFinder implements Service {
   ) {}
 
   async process(): Promise<void> {
-    await this.setMinProfitPercent();
     await this.processArbitrages();
     await this.reloadExchanges();
-  }
-
-  private async setMinProfitPercent() {
-    const { minProfitPercent } = await this.storage.getArbitrageConfig();
-    this.calculator.setMinProfitPercent(minProfitPercent);
-    logger.info(`Set calculator min profit to ${minProfitPercent}%`);
   }
 
   private async processArbitrages() {
