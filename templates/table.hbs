@@ -12,8 +12,16 @@ table {
     color: green
 }
 
+.bids .used {
+    color: rgb(0, 71, 0)
+}
+
 .asks td {
     color: red
+}
+
+.asks .used {
+    color: rgb(102, 4, 4)
 }
 
 td, th {
@@ -50,16 +58,24 @@ body {
     </tr>
     {{#each this.orderBook.asks}}
         <tr class="asks">
-            {{#each this}}
-                <td>{{this}}</td>
-            {{/each}}
+            {{#if this.isUsed}}
+                <td class="used"><b>{{this.quote}}</b></td>
+                <td class="used"><b>{{this.base}}</b></td>
+            {{else}}
+                <td>{{this.quote}}</td>
+                <td>{{this.base}}</td>
+            {{/if}}
         </tr>
     {{/each}}
     {{#each this.orderBook.bids}}
         <tr class="bids">
-            {{#each this}}
-                <td>{{this}}</td>
-            {{/each}}
+            {{#if this.isUsed}}
+                <td class="used"><b>{{this.quote}}</b></td>
+                <td class="used"><b>{{this.base}}</b></td>
+            {{else}}
+                <td>{{this.quote}}</td>
+                <td>{{this.base}}</td>
+            {{/if}}
         </tr>
     {{/each}}
     </table>
