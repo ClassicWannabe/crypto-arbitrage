@@ -96,7 +96,7 @@ export type WithdrawStep = {
   network: {
     name: string;
     withdrawNetwork: WithdrawStepNetworkDetails;
-    depositNetwork: WithdrawStepNetworkDetails;
+    depositNetwork: WithdrawStepNetworkDetails & { address: string };
   };
   exchanges: {
     withdrawExchangeId: string;

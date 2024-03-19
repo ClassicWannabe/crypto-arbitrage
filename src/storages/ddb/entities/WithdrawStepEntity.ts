@@ -97,6 +97,7 @@ export const WithdrawStepEntity = new Entity({
         deposit: {
           type: "map",
           required: true,
+          readOnly: true,
           properties: {
             id: {
               type: "string",
@@ -105,6 +106,8 @@ export const WithdrawStepEntity = new Entity({
             },
             address: {
               type: "string",
+              required: true,
+              readOnly: true,
             },
           },
         },

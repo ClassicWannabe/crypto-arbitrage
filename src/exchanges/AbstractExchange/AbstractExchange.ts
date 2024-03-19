@@ -314,8 +314,21 @@ export abstract class AbstractExchange implements Exchange {
   }
 
   @retryOnError()
-  async getDepositAddress(currencyCode: string) {
-    const address = await this.exchange.fetchDepositAddress(currencyCode);
+  async getDepositAddress(currencyCode: string, params: any) {
+    const address = await this.exchange.fetchDepositAddress(
+      currencyCode,
+      params
+    );
+
+    return parseValue({ schema: addressSchema, value: address });
+  }
+
+  @retryOnError()
+  async createDepositAddress(currencyCode: string, params: any) {
+    const address = await this.exchange.createDepositAddress(
+      currencyCode,
+      params
+    );
 
     return parseValue({ schema: addressSchema, value: address });
   }

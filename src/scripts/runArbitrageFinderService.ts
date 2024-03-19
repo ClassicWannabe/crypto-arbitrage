@@ -13,6 +13,8 @@ import { ExchangeFactory } from "../exchanges/ExchangeFactory/ExchangeFactory.js
 import { ArbitrageRepo } from "../storages/ArbitrageRepo/ArbitrageRepo.js";
 import { ArbitrageStepsCalculator } from "../calculators/ArbitrageStepsCalculator/ArbitrageStepsCalculator.js";
 import { FeeCalculator } from "../calculators/FeeCalculator/FeeCalculator.js";
+import { ExchangeType } from "../exchanges/types.js";
+import { AddressCalculator } from "../calculators/AddressCalculator/AddressCalculator.js";
 
 const storage = new FileStorage();
 const arbitrageConfig = await storage.getArbitrageConfig();
@@ -29,8 +31,10 @@ const publisher = new TelegramPublisher(bot, telegramGroupId);
 
 const formatter = new ArbitrageFormatter();
 const feeCalculator = new FeeCalculator();
+const addressCalculator = new AddressCalculator();
 const arbitrageStepsCalculator = new ArbitrageStepsCalculator(
   feeCalculator,
+  addressCalculator,
   arbitrageConfig.minProfitPercent
 );
 const mutliExchangeCalculator = new MultiExchangeCalculator(

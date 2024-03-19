@@ -117,7 +117,10 @@ export class ArbitrageRepo {
         arbitrageDataId,
         networkId: step.network.name,
         exchanges: {
-          deposit: { id: step.exchanges.depositExchangeId },
+          deposit: {
+            id: step.exchanges.depositExchangeId,
+            address: step.network.depositNetwork.address,
+          },
           withdraw: { id: step.exchanges.withdrawExchangeId },
         },
         fee: step.fee,

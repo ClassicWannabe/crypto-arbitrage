@@ -22,6 +22,7 @@ import {
   CalculatedFeeType,
   FeeCalculator,
 } from "../FeeCalculator/FeeCalculator.js";
+import { AddressCalculator } from "../AddressCalculator/AddressCalculator.js";
 
 type MarketDetails = {
   orderBook: OrderBook;
@@ -63,6 +64,7 @@ type CalculateWithdrawStepParams = {
   firstTradeEndAmount: number;
   withdrawExchangeTradeFee: Fee;
   arbitrageCalculationType: ArbitrageCalculationType;
+  depositAddress: string;
 };
 
 type CalculateLastTradeStepParams = {
@@ -83,6 +85,7 @@ export class ArbitrageStepsCalculator {
 
   constructor(
     private readonly feeCalculator: FeeCalculator,
+    private readonly addressCalculator: AddressCalculator,
     minProfitPercent: number = 0
   ) {
     this.checkMinProfitPercent(minProfitPercent);
@@ -109,6 +112,34 @@ export class ArbitrageStepsCalculator {
   }: CalculateArbitrageStepsParams): Promise<ArbitrageSteps | null> {
     const { symbol } = withdrawMarketDetails.marketData;
     const networkName = withdrawMarketDetails.network.network;
+    const withdrawCurrency = this.getWithdrawCurrency(
+      arbitrageCalculationType,
+      withdrawMarketDetails
+    );
+    const [withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee] =
+      await Promise.all([
+        this.feeCalculator.calculateFee({
+          type: CalculatedFeeType.TRADE,
+          exchange: withdrawMarketDetails.exchange,
+          symbol,
+        }),
+        this.feeCalculator.calculateFee({
+          type: CalculatedFeeType.TRADE,
+          exchange: depositMarketDetails.exchange,
+          symbol,
+        }),
+        this.feeCalculator.calculateFee({
+          type: CalculatedFeeType.WITHDRAW,
+          exchange: withdrawMarketDetails.exchange,
+          currencyCode: withdrawCurrency.code,
+          networkName,
+        }),
+      ]);
+    const depositAddress = await this.addressCalculator.getAddress({
+      currencyCode: withdrawCurrency.code,
+      exchange: depositMarketDetails.exchange,
+      networkId: depositMarketDetails.network.network,
+    });
     const { withdrawExchangeOrderBookList, depositExchangeOrderBookList } =
       this.getOrderBookLists({
         arbitrageCalculationType,
@@ -141,30 +172,6 @@ export class ArbitrageStepsCalculator {
       const firstTradeEndAmount = firstTradeStep.endCoin.amount;
       const firstTradeStartAmount = firstTradeStep.startCoin.amount;
 
-      const withdrawCurrency = this.getWithdrawCurrency(
-        arbitrageCalculationType,
-        withdrawMarketDetails
-      );
-      const [withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee] =
-        await Promise.all([
-          this.feeCalculator.calculateFee({
-            type: CalculatedFeeType.TRADE,
-            exchange: withdrawMarketDetails.exchange,
-            symbol,
-          }),
-          this.feeCalculator.calculateFee({
-            type: CalculatedFeeType.TRADE,
-            exchange: depositMarketDetails.exchange,
-            symbol,
-          }),
-          this.feeCalculator.calculateFee({
-            type: CalculatedFeeType.WITHDRAW,
-            exchange: withdrawMarketDetails.exchange,
-            currencyCode: withdrawCurrency.code,
-            networkName,
-          }),
-        ]);
-
       const withdrawStep = this.calculateWithdrawStep({
         arbitrageCalculationType,
         firstTradeEndAmount,
@@ -175,6 +182,7 @@ export class ArbitrageStepsCalculator {
           withdrawNetwork: withdrawMarketDetails.network,
         },
         withdrawExchangeTradeFee,
+        depositAddress,
       });
 
       const lastTradeStep = this.calculateLastTradeStep({
@@ -421,6 +429,7 @@ export class ArbitrageStepsCalculator {
     firstTradeEndAmount,
     withdrawExchangeTradeFee,
     networks: { depositNetwork, withdrawNetwork },
+    depositAddress,
   }: CalculateWithdrawStepParams): Omit<WithdrawStep, "fee"> {
     const withdrawCurrency = this.getWithdrawCurrency(
       arbitrageCalculationType,
@@ -445,6 +454,7 @@ export class ArbitrageStepsCalculator {
           isActive: depositNetwork.active,
           isDepositable: depositNetwork.deposit,
           isWithdrawable: depositNetwork.withdraw,
+          address: depositAddress,
         },
       },
       exchanges: {

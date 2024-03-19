@@ -160,10 +160,15 @@ export class ArbitrageFormatter implements Formatter {
       "deposit",
       depositNetwork
     );
+    const addressString = this.formatAddress(depositNetwork.address);
 
     return `Перенос по сети ${this.makeBold(networkName)} ${this.formatCoin(
       coin
-    )}\n${withdrawNetworkString}\n${depositNetworkString}\n\n`;
+    )}\n${addressString}\n${withdrawNetworkString}\n${depositNetworkString}\n\n`;
+  }
+
+  private formatAddress(address: string) {
+    return `Адрес: ${address}`;
   }
 
   private formatNetworkDetails(
