@@ -96,7 +96,7 @@ export const transactionSchema = z.object({
 
 export const addressSchema = z.object({
   currency: z.string().min(1),
-  network: z.array(z.string().min(1)),
+  network: z.string().min(1).nullish(),
   address: z.string().min(1),
 });
 

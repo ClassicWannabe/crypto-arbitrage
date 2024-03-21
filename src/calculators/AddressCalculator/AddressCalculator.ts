@@ -1,5 +1,3 @@
-import { InvalidAddress } from "ccxt";
-
 import { Exchange } from "../../exchanges/types.js";
 import { logger } from "../../logger/logger.js";
 import { deepmerge } from "deepmerge-ts";
@@ -56,15 +54,19 @@ export class AddressCalculator {
   }: AddressArgs) {
     let depositAddress;
     try {
-      depositAddress = await exchange.getDepositAddress(currencyCode, {
-        network: networkId,
-      });
-    } catch (error) {
-      if (error instanceof InvalidAddress) {
-        depositAddress = await exchange.createDepositAddress(currencyCode, {
+      try {
+        depositAddress = await exchange.getDepositAddress(currencyCode, {
           network: networkId,
         });
+      } catch {
+        depositAddress = await exchange.getDepositAddress(currencyCode);
       }
+    } catch (error) {
+      logger.warn({ currencyCode, networkId, exchange: exchange.id });
+      logger.warn((error as Error).stack);
+      depositAddress = await exchange.createDepositAddress(currencyCode, {
+        network: networkId,
+      });
     }
 
     return depositAddress?.address ?? null;

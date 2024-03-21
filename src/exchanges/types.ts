@@ -57,8 +57,8 @@ export interface Exchange {
     address: string
   ): Promise<Transcation>;
   getDeposits(): Promise<Transcation[]>;
-  getDepositAddress(currencyCode: string, params: any): Promise<Address>;
-  createDepositAddress(currencyCode: string, params: any): Promise<Address>;
+  getDepositAddress(currencyCode: string, params?: any): Promise<Address>;
+  createDepositAddress(currencyCode: string, params?: any): Promise<Address>;
   amountToPrecision(symbol: string, amount: number): number;
   priceToPrecision(symbol: string, price: number): number;
   costToPrecision(symbol: string, cost: number): number;
