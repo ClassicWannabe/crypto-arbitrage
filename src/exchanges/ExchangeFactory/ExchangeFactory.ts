@@ -106,8 +106,9 @@ export class ExchangeFactory {
   }
 
   getAllExchanges(): Exchange[] {
-    return Object.values(ExchangeType).map((exchangeType) =>
-      this.getExchange(exchangeType)
-    );
+    // TODO: remove filtering
+    return Object.values(ExchangeType)
+      .filter((e) => e !== ExchangeType.BITGET)
+      .map((exchangeType) => this.getExchange(exchangeType));
   }
 }
