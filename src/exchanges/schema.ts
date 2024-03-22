@@ -14,6 +14,7 @@ export const marketSchema = z.object({
 export const marketsSchema = z.record(z.string(), marketSchema);
 
 export const networkSchema = z.object({
+  id: z.string(),
   network: z.string().default("undefined"),
   active: z.boolean().nullish(),
   deposit: z.boolean().nullish(),

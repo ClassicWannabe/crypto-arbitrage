@@ -13,10 +13,10 @@ export const generateTradeArbitrageStep = (
     amount: 1.5,
     arbitrageDataId: faker.string.uuid(),
     exchangeId: faker.string.uuid(),
-    fee: {
+    fees: [{
       type: FeeType.PERCENT,
       value: 0.1,
-    },
+    }],
     price: faker.number.float({ min: 0.1 }),
     status: ArbitrageStepStatus.UNTOUCHED,
     stepOrder: faker.number.int({ min: 0 }),

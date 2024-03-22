@@ -98,7 +98,7 @@ export class ArbitrageRepo {
         tradeOperation: step.operation,
         exchangeId: step.exchangeId,
         price: step.price,
-        fee: step.fee,
+        fees: step.fees,
       });
       return acc;
     }, []);
@@ -123,7 +123,7 @@ export class ArbitrageRepo {
           },
           withdraw: { id: step.exchanges.withdrawExchangeId },
         },
-        fee: step.fee,
+        fees: step.fees,
         amount: step.coin.amount,
         currencyCode: step.coin.currencyCode,
       });

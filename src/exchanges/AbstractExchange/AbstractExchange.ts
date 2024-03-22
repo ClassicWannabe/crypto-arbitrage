@@ -201,7 +201,7 @@ export abstract class AbstractExchange implements Exchange {
     const rawDepositWithdrawFee =
       await this.exchange.fetchDepositWithdrawFee(code);
     if (!rawDepositWithdrawFee) {
-      return null;
+      return [];
     }
 
     const depositWithdrawFee = parseValue({
@@ -222,21 +222,24 @@ export abstract class AbstractExchange implements Exchange {
         : null;
 
     if (isNil(networkName)) {
-      return defaultWithdrawFee;
+      return defaultWithdrawFee ? [defaultWithdrawFee] : [];
     }
 
-    const networkWithdrawFee = depositWithdrawFee.networks[networkName];
+    const networkId = currency?.networks[networkName]?.id ?? networkName
+    const networkWithdrawFee = depositWithdrawFee.networks[networkName] ?? depositWithdrawFee.networks[networkId];
 
     if (!networkWithdrawFee?.withdraw.fee) {
-      return defaultWithdrawFee;
+      return defaultWithdrawFee ? [defaultWithdrawFee] : [];
     }
 
-    return {
-      value: networkWithdrawFee.withdraw.fee,
-      type: networkWithdrawFee.withdraw.percentage
-        ? FeeType.PERCENT
-        : FeeType.FIXED,
-    };
+    return [
+      {
+        value: networkWithdrawFee.withdraw.fee,
+        type: networkWithdrawFee.withdraw.percentage
+          ? FeeType.PERCENT
+          : FeeType.FIXED,
+      },
+    ];
   }
 
   @retryOnNetworkError()

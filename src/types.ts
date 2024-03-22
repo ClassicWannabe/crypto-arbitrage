@@ -76,13 +76,14 @@ export type TradeStep = {
   price: number;
   amount: number;
   exchangeId: string;
-  fee: Fee;
+  fees: Fee[];
   dayChangePercentage?: number | null;
   isActive?: boolean;
 };
 
-export type FeeStep = Pick<Fee, "type" | "value"> & {
+export type FeeStep = {
   event: ExchangeEvent.PAY_FEE;
+  fees: Fee[];
 };
 
 export type WithdrawStepNetworkDetails = {
@@ -103,7 +104,7 @@ export type WithdrawStep = {
     depositExchangeId: string;
   };
   coin: CurrencyAmount;
-  fee: Fee;
+  fees: Fee[];
 };
 
 export type ArbitrageSteps = [

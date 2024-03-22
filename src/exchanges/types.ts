@@ -36,7 +36,7 @@ export interface Exchange {
   getOrderBook(symbol: string, limit?: number): Promise<OrderBook | null>;
   resetOrderBookCache(): void;
   getTradingFee(symbol: string): Promise<Fee | null>;
-  getWithdrawFee(code: string, networkName?: string): Promise<Fee | null>;
+  getWithdrawFee(code: string, networkName?: string): Promise<Fee[]>;
   getTicker(symbol: string): Promise<Ticker>;
   resetTickerCache(): void;
   getBalance(): Promise<Balance>;

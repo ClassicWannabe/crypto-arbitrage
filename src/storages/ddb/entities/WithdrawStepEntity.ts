@@ -61,18 +61,25 @@ export const WithdrawStepEntity = new Entity({
     transactionId: {
       type: "string",
     },
-    fee: {
-      type: "map",
+    fees: {
+      type: "list",
       required: true,
       readOnly: true,
-      properties: {
-        value: {
-          type: "number",
-          required: true,
-        },
-        type: {
-          type: Object.values(FeeType),
-          required: true,
+      items: {
+        type: "map",
+        required: true,
+        readOnly: true,
+        properties: {
+          value: {
+            type: "number",
+            required: true,
+            readOnly: true,
+          },
+          type: {
+            type: Object.values(FeeType),
+            required: true,
+            readOnly: true,
+          },
         },
       },
     },

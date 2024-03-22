@@ -23,7 +23,7 @@ describe(FeeCalculator.name, () => {
       const emptyFee = { type: FeeType.FIXED, value: 0 };
       const { calculator } = createCalculator();
 
-      const fees = await calculator.calculateFee(mockArgs);
+      const fees = await calculator.calculateFees(mockArgs);
 
       expect(fees).toEqual({
         withdrawExchangeTradeFee: emptyFee,

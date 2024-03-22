@@ -1,4 +1,5 @@
 import { deepmerge } from "deepmerge-ts";
+
 import { Exchange } from "../../exchanges/types.js";
 import { Fee, FeeType } from "../../types.js";
 
@@ -26,15 +27,9 @@ type SavedFeesData = {
   networkName?: string;
 };
 
-export type Fees = {
-  withdrawExchangeTradeFee: Fee;
-  depositExchangeTradeFee: Fee;
-  withdrawFee: Fee;
-};
-
 type SavedFee = {
   lastUpdate: Date;
-  fee: Fee;
+  fees: Fee[];
 };
 
 type CurrencyFees = {
@@ -50,7 +45,7 @@ type SavedFees = {
 export class FeeCalculator {
   private savedFees: SavedFees = {};
 
-  async calculateFee(args: CalculateFeesArgs): Promise<Fee> {
+  async calculateFees(args: CalculateFeesArgs): Promise<Fee[]> {
     let symbolOrCurrencyCode;
     let networkName;
     if (args.type === CalculatedFeeType.TRADE) {
@@ -80,7 +75,7 @@ export class FeeCalculator {
     return newFee;
   }
 
-  private getSavedFee(data: SavedFeesData): Fee | null {
+  private getSavedFee(data: SavedFeesData): Fee[] | null {
     return this.processSavedFee(data);
   }
 
@@ -116,37 +111,37 @@ export class FeeCalculator {
     if (now - savedFee.lastUpdate.getTime() > thirtyMinInMs) {
       return null;
     }
-    return savedFee.fee;
+    return savedFee.fees;
   }
 
   private async fetchNewFee(args: CalculateFeesArgs) {
-    const emptyFee = { type: FeeType.FIXED, value: 0 };
-    let fee;
+    let fees = [];
     if (args.type === CalculatedFeeType.TRADE) {
-      fee = await args.exchange.getTradingFee(args.symbol);
+      const tradingFee = await args.exchange.getTradingFee(args.symbol);
+      fees = tradingFee ? [tradingFee] : [];
     } else {
-      fee = await args.exchange.getWithdrawFee(
+      fees = await args.exchange.getWithdrawFee(
         args.currencyCode,
         args.networkName
       );
     }
 
-    return fee ?? emptyFee;
+    return fees;
   }
 
   private updateSavedFee(
-    fee: Fee,
+    fees: Fee[],
     { exchangeId, symbolOrCurrencyCode, networkName }: SavedFeesData
   ) {
     if (networkName) {
       this.savedFees[exchangeId] = deepmerge(this.savedFees[exchangeId], {
         [symbolOrCurrencyCode]: {
-          [networkName]: { lastUpdate: new Date(), fee },
+          [networkName]: { lastUpdate: new Date(), fees },
         },
       });
     } else {
       this.savedFees[exchangeId] = deepmerge(this.savedFees[exchangeId], {
-        [symbolOrCurrencyCode]: { lastUpdate: new Date(), fee },
+        [symbolOrCurrencyCode]: { lastUpdate: new Date(), fees },
       });
     }
   }
@@ -158,10 +153,11 @@ export class FeeCalculator {
     return amount - fee.value;
   }
 
-  addFee(amount: number, fee: Fee): number {
-    if (fee.type === FeeType.PERCENT) {
-      return amount + amount * fee.value;
+  deductFees(amount: number, fees: Fee[]): number {
+    let result = amount;
+    for (const fee of fees) {
+      result = this.deductFee(result, fee);
     }
-    return amount + fee.value;
+    return result;
   }
 }

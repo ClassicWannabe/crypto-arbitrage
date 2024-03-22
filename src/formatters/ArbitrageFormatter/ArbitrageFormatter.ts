@@ -7,6 +7,7 @@ import {
   ArbitrageSteps,
   CurrencyAmount,
   ExchangeEvent,
+  Fee,
   FeeStep,
   FeeType,
   StatusStep,
@@ -139,8 +140,23 @@ export class ArbitrageFormatter implements Formatter {
   }
 
   private formatFeeStep(step: FeeStep) {
-    const feeTypeWord = this.formatFeeType(step.type);
-    return `Комиссия: ${this.makeBold(`${step.value}${feeTypeWord}`)} \n\n`;
+    const { fees } = step;
+    let result = "Комиссия: ";
+    for (let idx = 0; idx < fees.length; idx++) {
+      const fee = fees[idx]!;
+      const formattedFee = this.formatFee(fee);
+      if (idx === 0) {
+        result += formattedFee;
+      } else {
+        result += ` + ${formattedFee}`;
+      }
+    }
+    return result + "\n\n";
+  }
+
+  private formatFee(fee: Fee) {
+    const feeTypeWord = this.formatFeeType(fee.type);
+    return this.makeBold(`${fee.value}${feeTypeWord}`);
   }
 
   private formatFeeType(feeType: FeeType) {

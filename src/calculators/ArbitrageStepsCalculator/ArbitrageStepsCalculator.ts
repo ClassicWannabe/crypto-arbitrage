@@ -62,7 +62,7 @@ type CalculateWithdrawStepParams = {
   depositMarketDetails: MarketDetails;
   networks: ExchangeNetworks;
   firstTradeEndAmount: number;
-  withdrawExchangeTradeFee: Fee;
+  withdrawExchangeTradeFees: Fee[];
   arbitrageCalculationType: ArbitrageCalculationType;
   depositAddress: string;
 };
@@ -71,7 +71,7 @@ type CalculateLastTradeStepParams = {
   depositMarketDetails: MarketDetails;
   depositOrderBookList: OrderBookList;
   withdrawAmount: number;
-  withdrawFee: Fee;
+  withdrawFees: Fee[];
   arbitrageCalculationType: ArbitrageCalculationType;
 };
 
@@ -116,19 +116,19 @@ export class ArbitrageStepsCalculator {
       arbitrageCalculationType,
       withdrawMarketDetails
     );
-    const [withdrawExchangeTradeFee, depositExchangeTradeFee, withdrawFee] =
+    const [withdrawExchangeTradeFees, depositExchangeTradeFees, withdrawFees] =
       await Promise.all([
-        this.feeCalculator.calculateFee({
+        this.feeCalculator.calculateFees({
           type: CalculatedFeeType.TRADE,
           exchange: withdrawMarketDetails.exchange,
           symbol,
         }),
-        this.feeCalculator.calculateFee({
+        this.feeCalculator.calculateFees({
           type: CalculatedFeeType.TRADE,
           exchange: depositMarketDetails.exchange,
           symbol,
         }),
-        this.feeCalculator.calculateFee({
+        this.feeCalculator.calculateFees({
           type: CalculatedFeeType.WITHDRAW,
           exchange: withdrawMarketDetails.exchange,
           currencyCode: withdrawCurrency.code,
@@ -181,7 +181,7 @@ export class ArbitrageStepsCalculator {
           depositNetwork: depositMarketDetails.network,
           withdrawNetwork: withdrawMarketDetails.network,
         },
-        withdrawExchangeTradeFee,
+        withdrawExchangeTradeFees,
         depositAddress,
       });
 
@@ -193,13 +193,13 @@ export class ArbitrageStepsCalculator {
           quotations: depositQuotations,
         },
         withdrawAmount: withdrawStep.coin.amount,
-        withdrawFee,
+        withdrawFees,
       });
       const lastTradeEndAmount = lastTradeStep.endCoin.amount;
 
-      const finalAmount = this.feeCalculator.deductFee(
+      const finalAmount = this.feeCalculator.deductFees(
         lastTradeEndAmount,
-        depositExchangeTradeFee
+        depositExchangeTradeFees
       );
       const profitOrLoss = this.getProfitOrLoss(
         firstTradeStartAmount,
@@ -209,19 +209,19 @@ export class ArbitrageStepsCalculator {
       const steps: ArbitrageSteps = [
         {
           ...firstTradeStep,
-          fee: withdrawExchangeTradeFee,
+          fees: withdrawExchangeTradeFees,
         },
-        { event: ExchangeEvent.PAY_FEE, ...withdrawExchangeTradeFee },
+        { event: ExchangeEvent.PAY_FEE, fees: withdrawExchangeTradeFees },
         {
           ...withdrawStep,
-          fee: withdrawFee,
+          fees: withdrawFees,
         },
-        { event: ExchangeEvent.PAY_FEE, ...withdrawFee },
+        { event: ExchangeEvent.PAY_FEE, fees: withdrawFees },
         {
           ...lastTradeStep,
-          fee: depositExchangeTradeFee,
+          fees: depositExchangeTradeFees,
         },
-        { event: ExchangeEvent.PAY_FEE, ...depositExchangeTradeFee },
+        { event: ExchangeEvent.PAY_FEE, fees: depositExchangeTradeFees },
         {
           event: ExchangeEvent.STATUS,
           coin: {
@@ -361,7 +361,7 @@ export class ArbitrageStepsCalculator {
     arbitrageCalculationType,
     withdrawOrderBookList,
     depositOrderBookList,
-  }: CalculateFirstTradeStepParams): Omit<TradeStep, "fee"> {
+  }: CalculateFirstTradeStepParams): Omit<TradeStep, "fees"> {
     const operation =
       arbitrageCalculationType === ArbitrageCalculationType.FORWARD
         ? TradeOperation.BUY
@@ -427,17 +427,17 @@ export class ArbitrageStepsCalculator {
     depositMarketDetails,
     withdrawMarketDetails,
     firstTradeEndAmount,
-    withdrawExchangeTradeFee,
+    withdrawExchangeTradeFees,
     networks: { depositNetwork, withdrawNetwork },
     depositAddress,
-  }: CalculateWithdrawStepParams): Omit<WithdrawStep, "fee"> {
+  }: CalculateWithdrawStepParams): Omit<WithdrawStep, "fees"> {
     const withdrawCurrency = this.getWithdrawCurrency(
       arbitrageCalculationType,
       withdrawMarketDetails
     );
-    const rawWithdrawAmount = this.feeCalculator.deductFee(
+    const rawWithdrawAmount = this.feeCalculator.deductFees(
       firstTradeEndAmount,
-      withdrawExchangeTradeFee
+      withdrawExchangeTradeFees
     );
     const withdrawAmount = rawWithdrawAmount;
 
@@ -489,17 +489,17 @@ export class ArbitrageStepsCalculator {
     depositMarketDetails,
     depositOrderBookList,
     withdrawAmount,
-    withdrawFee,
-  }: CalculateLastTradeStepParams): Omit<TradeStep, "fee"> {
+    withdrawFees,
+  }: CalculateLastTradeStepParams): Omit<TradeStep, "fees"> {
     const symbol = depositMarketDetails.marketData.symbol;
     const aggregatedDepositQuotation = this.roundAggregateQuotations(
       depositOrderBookList.quotations,
       depositMarketDetails.exchange,
       depositMarketDetails.marketData.symbol
     );
-    const rawLastTradeStartAmount = this.feeCalculator.deductFee(
+    const rawLastTradeStartAmount = this.feeCalculator.deductFees(
       withdrawAmount,
-      withdrawFee
+      withdrawFees
     );
 
     const lastTradePrice = aggregatedDepositQuotation.quote;
