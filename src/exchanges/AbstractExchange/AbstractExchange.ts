@@ -23,8 +23,8 @@ import {
 } from "../schema.js";
 import { FeeType } from "../../types.js";
 import { logger } from "../../logger/logger.js";
-import { retryOnError } from "../decorators.js";
 import { parseValue } from "../../helpers.js";
+import { retryOnNetworkError } from "../decorators.js";
 
 export abstract class AbstractExchange implements Exchange {
   protected readonly exchange: CcxtExchange;
@@ -42,19 +42,19 @@ export abstract class AbstractExchange implements Exchange {
     await this.exchange.loadMarkets(true);
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getMarkets() {
     const markets = await this.exchange.loadMarkets();
 
     return parseValue({ schema: marketsSchema, value: markets });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getRawMarkets() {
     return await this.exchange.fetchMarkets();
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getMarket(symbol: string, isActive?: boolean) {
     const markets = await this.exchange.loadMarkets();
     const market = markets[symbol];
@@ -68,7 +68,7 @@ export abstract class AbstractExchange implements Exchange {
     return this.getActiveOrInactiveItem(parsedMarket, isActive);
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getCurrencies() {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
@@ -76,13 +76,13 @@ export abstract class AbstractExchange implements Exchange {
     return parseValue({ schema: currenciesSchema, value: currencies });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getRawCurrencies() {
     await this.exchange.loadMarkets();
     return this.exchange.currencies;
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getCurrency(code: string, isActive?: boolean) {
     await this.exchange.loadMarkets();
     const currencies = this.exchange.currencies;
@@ -100,7 +100,7 @@ export abstract class AbstractExchange implements Exchange {
     return this.getActiveOrInactiveItem(parsedCurrency, isActive);
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getNetworks(currencyCode: string, isActive?: boolean) {
     const currency = await this.getCurrency(currencyCode);
 
@@ -136,7 +136,7 @@ export abstract class AbstractExchange implements Exchange {
     return null;
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getOrderBook(symbol: string, limit?: number) {
     const cachedOrderBook = this.orderBooks[symbol];
 
@@ -179,7 +179,7 @@ export abstract class AbstractExchange implements Exchange {
     this.orderBooks = {};
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getTradingFee(symbol: string) {
     const market = await this.getMarket(symbol);
 
@@ -196,7 +196,7 @@ export abstract class AbstractExchange implements Exchange {
     return { value: fee, type: FeeType.FIXED };
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getWithdrawFee(code: string, networkName?: string) {
     const rawDepositWithdrawFee =
       await this.exchange.fetchDepositWithdrawFee(code);
@@ -239,7 +239,7 @@ export abstract class AbstractExchange implements Exchange {
     };
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getTicker(symbol: string) {
     const cachedTicker = this.tickers[symbol];
 
@@ -256,7 +256,7 @@ export abstract class AbstractExchange implements Exchange {
     this.tickers = {};
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getBalance() {
     const balance = await this.exchange.fetchBalance();
 
@@ -266,14 +266,14 @@ export abstract class AbstractExchange implements Exchange {
     );
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getOrder(id: string, symbol: string) {
     const order = await this.exchange.fetchOrder(id, symbol);
 
     return parseValue({ schema: orderSchema, value: order });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async createLimitBuyOrder(symbol: string, amount: number, price: number) {
     const order = await this.exchange.createLimitBuyOrder(
       symbol,
@@ -284,7 +284,7 @@ export abstract class AbstractExchange implements Exchange {
     return parseValue({ schema: orderSchema, value: order });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async createLimitSellOrder(symbol: string, amount: number, price: number) {
     const order = await this.exchange.createLimitSellOrder(
       symbol,
@@ -295,7 +295,7 @@ export abstract class AbstractExchange implements Exchange {
     return parseValue({ schema: orderSchema, value: order });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async withdraw(currencyCode: string, amount: number, address: string) {
     const transaction = await this.exchange.withdraw(
       currencyCode,
@@ -306,14 +306,14 @@ export abstract class AbstractExchange implements Exchange {
     return parseValue({ schema: transactionSchema, value: transaction });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getDeposits() {
     const deposits = await this.exchange.fetchDeposits();
 
     return parseValue({ schema: transactionSchema.array(), value: deposits });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async getDepositAddress(currencyCode: string, params: any) {
     const address = await this.exchange.fetchDepositAddress(
       currencyCode,
@@ -323,7 +323,7 @@ export abstract class AbstractExchange implements Exchange {
     return parseValue({ schema: addressSchema, value: address });
   }
 
-  @retryOnError()
+  @retryOnNetworkError()
   async createDepositAddress(currencyCode: string, params: any) {
     const address = await this.exchange.createDepositAddress(
       currencyCode,

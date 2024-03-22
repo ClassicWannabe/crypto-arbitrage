@@ -1,6 +1,8 @@
+import { deepmerge } from "deepmerge-ts";
+
+import { retryOnError } from "../../decorators.js";
 import { Exchange } from "../../exchanges/types.js";
 import { logger } from "../../logger/logger.js";
-import { deepmerge } from "deepmerge-ts";
 
 type SavedAddresses = {
   [exchangeId: string]: {
@@ -47,6 +49,7 @@ export class AddressCalculator {
     return address;
   }
 
+  @retryOnError([Error], 3)
   private async fetchAddress({
     currencyCode,
     exchange,
