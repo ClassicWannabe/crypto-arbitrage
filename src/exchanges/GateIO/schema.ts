@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 const transformFixToNumber = z.string().transform((value) => +value);
-const transformPercentToNumber = z
-  .string()
-  .transform((value) => +value.replace("%", ""));
+const transformPercentToNumber = z.string().transform((value) => {
+  const numericValue = +value.replace("%", "");
+  return numericValue / 100;
+});
 
 export const withdrawFeeSchema = z.object({
   info: z.object({

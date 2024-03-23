@@ -19,7 +19,6 @@ import {
 import { Formatter } from "../types.js";
 import { customDeepmerge } from "../../storages/helpers.js";
 import { tableHbsPath } from "./consts.js";
-import { Quotation } from "../../exchanges/types.js";
 
 export class ArbitrageFormatter implements Formatter {
   async format({ symbol, steps }: ArbitrageData) {
@@ -156,7 +155,8 @@ export class ArbitrageFormatter implements Formatter {
 
   private formatFee(fee: Fee) {
     const feeTypeWord = this.formatFeeType(fee.type);
-    return this.makeBold(`${fee.value}${feeTypeWord}`);
+    const feeValue = fee.type === FeeType.PERCENT ? fee.value * 100 : fee.value;
+    return this.makeBold(`${feeValue}${feeTypeWord}`);
   }
 
   private formatFeeType(feeType: FeeType) {
