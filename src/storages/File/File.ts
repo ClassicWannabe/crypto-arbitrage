@@ -6,7 +6,7 @@ import {
   arbitrageConfigSchema,
   deepPartialArbitrageConfigSchema,
 } from "../schema.js";
-import { customDeepmerge } from "../helpers.js";
+import { customDeepmergeArrays } from "../../helpers.js";
 
 export class FileStorage implements Storage {
   async getSymbols(): Promise<string[]> {
@@ -55,7 +55,7 @@ export class FileStorage implements Storage {
   async saveArbitrageConfig(config: DeepPartialArbitrageConfig) {
     const parsedConfig = deepPartialArbitrageConfigSchema.parse(config);
     const oldConfig = await this.getArbitrageConfig();
-    const mergedConfig = customDeepmerge(oldConfig, parsedConfig);
+    const mergedConfig = customDeepmergeArrays(oldConfig, parsedConfig);
 
     await this.saveJsonFile(ARBITRAGE_CONFIG_PATH, mergedConfig);
   }

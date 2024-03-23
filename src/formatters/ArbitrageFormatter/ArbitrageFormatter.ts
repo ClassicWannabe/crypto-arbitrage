@@ -17,7 +17,7 @@ import {
   WithdrawStepNetworkDetails,
 } from "../../types.js";
 import { Formatter } from "../types.js";
-import { customDeepmerge } from "../../storages/helpers.js";
+import { customDeepmergeArrays } from "../../helpers.js";
 import { tableHbsPath } from "./consts.js";
 
 export class ArbitrageFormatter implements Formatter {
@@ -285,7 +285,7 @@ export class ArbitrageFormatter implements Formatter {
         step.orderBook,
         step.usedQuotations
       );
-      const normalizedStep = customDeepmerge(step, {
+      const normalizedStep = customDeepmergeArrays(step, {
         orderBook: normalizedOrderBook,
       });
       normalizedSteps.push(normalizedStep);

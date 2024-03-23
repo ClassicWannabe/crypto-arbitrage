@@ -1,9 +1,11 @@
 import ccxt from "ccxt";
+import { z } from "zod";
+import type { DeepMergeLeafURI } from "deepmerge-ts";
+import { deepmergeCustom } from "deepmerge-ts";
 
 import { ENV, ENV_NAMES } from "./consts.js";
 import { logger } from "./logger/logger.js";
 import { RateLimits } from "./storages/types.js";
-import { z } from "zod";
 
 export const getEnv = (name: keyof typeof ENV): string => {
   const envVar = ENV[name] ?? process.env[ENV_NAMES[name]];
@@ -70,3 +72,8 @@ export const parseValue = <TSchema extends z.Schema>(
     throw error;
   }
 };
+export const customDeepmergeArrays = deepmergeCustom<{
+  DeepMergeArraysURI: DeepMergeLeafURI;
+}>({
+  mergeArrays: false,
+});

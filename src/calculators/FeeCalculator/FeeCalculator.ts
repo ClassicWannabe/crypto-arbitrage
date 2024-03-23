@@ -1,7 +1,6 @@
-import { deepmerge } from "deepmerge-ts";
-
 import { Exchange } from "../../exchanges/types.js";
 import { Fee, FeeType } from "../../types.js";
+import { customDeepmergeArrays } from "../../helpers.js";
 
 export enum CalculatedFeeType {
   WITHDRAW = "withdraw",
@@ -65,14 +64,14 @@ export class FeeCalculator {
       return savedFee;
     }
 
-    const newFee = await this.fetchNewFee(args);
-    this.updateSavedFee(newFee, {
+    const newFees = await this.fetchNewFee(args);
+    this.updateSavedFee(newFees, {
       exchangeId: args.exchange.id,
       symbolOrCurrencyCode,
       networkName,
     });
 
-    return newFee;
+    return newFees;
   }
 
   private getSavedFee(data: SavedFeesData): Fee[] | null {
@@ -134,15 +133,21 @@ export class FeeCalculator {
     { exchangeId, symbolOrCurrencyCode, networkName }: SavedFeesData
   ) {
     if (networkName) {
-      this.savedFees[exchangeId] = deepmerge(this.savedFees[exchangeId], {
-        [symbolOrCurrencyCode]: {
-          [networkName]: { lastUpdate: new Date(), fees },
-        },
-      });
+      this.savedFees[exchangeId] = customDeepmergeArrays(
+        this.savedFees[exchangeId],
+        {
+          [symbolOrCurrencyCode]: {
+            [networkName]: { lastUpdate: new Date(), fees },
+          },
+        }
+      );
     } else {
-      this.savedFees[exchangeId] = deepmerge(this.savedFees[exchangeId], {
-        [symbolOrCurrencyCode]: { lastUpdate: new Date(), fees },
-      });
+      this.savedFees[exchangeId] = customDeepmergeArrays(
+        this.savedFees[exchangeId],
+        {
+          [symbolOrCurrencyCode]: { lastUpdate: new Date(), fees },
+        }
+      );
     }
   }
 
