@@ -11,7 +11,15 @@
     "gateio": null,
     "bitget": null
   },
-  "ignoredSymbols": ["TIME/USDT", "GEM/USDT", "SOLS/USDT"],
+  "ignoredSymbols": [
+    "TIME/USDT",
+    "GEM/USDT",
+    "SOLS/USDT",
+    "WALLET/USDT",
+    "DERP/USDT",
+    "GAME/USDT",
+    "GPT/USDT"
+  ],
   "targetCoins": ["USDT"],
   "timeout": 20000
 }
