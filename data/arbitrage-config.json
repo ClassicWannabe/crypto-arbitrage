@@ -18,7 +18,8 @@
     "WALLET/USDT",
     "DERP/USDT",
     "GAME/USDT",
-    "GPT/USDT"
+    "GPT/USDT",
+    "NGL/USDT"
   ],
   "targetCoins": ["USDT"],
   "timeout": 20000

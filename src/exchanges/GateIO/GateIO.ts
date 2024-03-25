@@ -14,6 +14,10 @@ export class GateIO extends AbstractExchange {
   async getWithdrawFee(currencyCode: string, networkName?: string) {
     const fee = await this.exchange.fetchDepositWithdrawFee(currencyCode);
 
+    if (!fee) {
+      return [];
+    }
+
     const parsedFee = parseValue({ schema: withdrawFeeSchema, value: fee });
 
     const withdrawFix = parsedFee.info.withdraw_fix;
